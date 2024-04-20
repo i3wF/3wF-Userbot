@@ -7,7 +7,7 @@ FIRE_THUMB = "https://i.imgur.com/qhYYqZa.png"
 @Client.on_inline_query(group=2)
 async def inline(_, query: InlineQuery):
     string = query.query.lower()
-    if string == "":
+    if string == "commands":
         help_text = (
             "Available Commands:\n\n"
             "/start - Start the bot\n"
@@ -34,6 +34,11 @@ async def inline(_, query: InlineQuery):
                     ),
                     thumb_url=FIRE_THUMB,
                 ),
+            ]
+        )
+    elif string == "shit":
+        await query.answer(
+            results=[
                 InlineQueryResultArticle(
                     title="shit",
                     input_message_content=InputTextMessageContent(
@@ -50,7 +55,7 @@ async def inline(_, query: InlineQuery):
                         ]
                     ),
                     thumb_url=FIRE_THUMB
-                )
+                ),
             ]
         )
 
