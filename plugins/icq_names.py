@@ -419,12 +419,12 @@ async def nickname_handler(client: Client, message: Message):
     args = get_args_raw(message)
     if not args:
         return await message.edit_text(
-            "<emoji id=5260342697075416641>❌</emoji><b> State didn't provided</b>",
+            "<emoji id=5830218371160873658>❌</emoji><b> State didn't provided</b>",
             quote=True,
         )
     if args.lower() not in ("on", "off", "1", "0", "true", "false"):
         return await message.edit_text(
-            "<emoji id=5260342697075416641>❌</emoji><b> State should be True or False</b>",
+            "<emoji id=5830218371160873658>❌</emoji><b> State should be True or False</b>",
             quote=True,
         )
 
@@ -432,7 +432,7 @@ async def nickname_handler(client: Client, message: Message):
     if args.lower() in ("on", "1", "true"):
         if db.get("icq_names", "enabled"):
             return await message.edit_text(
-                "<emoji id=5260342697075416641>❌</emoji><b> ICQ Names already enabled</b>"
+                "<emoji id=5830218371160873658>❌</emoji><b> ICQ Names already enabled</b>"
             )
 
         db.set("icq_names", "enabled", True)
@@ -443,7 +443,7 @@ async def nickname_handler(client: Client, message: Message):
             await client.update_profile(first_name=random.choice(names), last_name="")
         except Exception as e:
             return await message.edit_text(
-                f"<emoji id=5260342697075416641>❌</emoji><b>Cant change name for now\n\nError{e}</b>"
+                f"<emoji id=5830218371160873658>❌</emoji><b>Cant change name for now\n\nError{e}</b>"
             )
         job = scheduler.get_job("icq_names")
         if job:
@@ -457,7 +457,7 @@ async def nickname_handler(client: Client, message: Message):
             )
         except Exception as e:
             return await message.edit_text(
-                f"<emoji id=5260342697075416641>❌</emoji><b>Cant change name for now\n\nError{e}</b>"
+                f"<emoji id=5830218371160873658>❌</emoji><b>Cant change name for now\n\nError{e}</b>"
             )
 
     await message.edit_text(
@@ -469,7 +469,7 @@ async def nickname_handler(client: Client, message: Message):
 async def nickname_random_handler(client: Client, message: Message):
     if not db.get("icq_names", "enabled", False):
         return await message.edit_text(
-            "<emoji id=5260342697075416641>❌</emoji><b> ICQ Names should be enabled</b>"
+            "<emoji id=5830218371160873658>❌</emoji><b> ICQ Names should be enabled</b>"
         )
 
     try:
@@ -477,7 +477,7 @@ async def nickname_random_handler(client: Client, message: Message):
         await message.edit_text("done")
     except Exception as e:
         return await message.edit_text(
-            f"<emoji id=5260342697075416641>❌</emoji><b>Cant change name for now\n\nError{e}</b>"
+            f"<emoji id=5830218371160873658>❌</emoji><b>Cant change name for now\n\nError{e}</b>"
         )
 
 
@@ -512,12 +512,12 @@ async def nickname_trigger_handler(_: Client, message: Message):
 
     if len(args.split()) < 2:
         return await message.edit_text(
-            "<emoji id=5260342697075416641>❌</emoji><b> Trigger type and values didn't provided</b>"
+            "<emoji id=5830218371160873658>❌</emoji><b> Trigger type and values didn't provided</b>"
         )
 
     if args.split()[0].lower() not in ("cron", "interval"):
         return await message.edit_text(
-            "<emoji id=5260342697075416641>❌</emoji><b> Trigger type should be Cron or Interval</b>"
+            "<emoji id=5830218371160873658>❌</emoji><b> Trigger type should be Cron or Interval</b>"
         )
 
     # Values should be like this for cron:
@@ -533,7 +533,7 @@ async def nickname_trigger_handler(_: Client, message: Message):
             )
         except ValueError:
             return await message.edit_text(
-                "<emoji id=5260342697075416641>❌</emoji><b> Invalid cron expression</b>"
+                "<emoji id=5830218371160873658>❌</emoji><b> Invalid cron expression</b>"
             )
     # Or like this for interval:
     # 3600 (IN SECONDS)
@@ -548,7 +548,7 @@ async def nickname_trigger_handler(_: Client, message: Message):
             )
         except ValueError:
             return await message.edit_text(
-                "<emoji id=5260342697075416641>❌</emoji><b> Invalid interval</b>"
+                "<emoji id=5830218371160873658>❌</emoji><b> Invalid interval</b>"
             )
 
     await message.edit_text(

@@ -331,7 +331,7 @@ async def history_config_handler(client: Client, message: Message):
 
     if not result:
         return await message.edit_text(
-            "<emoji id=5260342697075416641>❌</emoji><b> Invalid arguments</b>"
+            "<emoji id=5830218371160873658>❌</emoji><b> Invalid arguments</b>"
         )
 
     return await message.edit_text(result)

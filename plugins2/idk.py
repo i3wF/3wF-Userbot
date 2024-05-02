@@ -58,4 +58,3 @@ async def inline(_, query: InlineQuery):
                 ),
             ]
         )
-

@@ -32,7 +32,7 @@ async def main():
     )
 
     app = Client('myOwnAccount', sleep_threshold=30, api_id=3895828, api_hash='5229902a14b2512c35688aa152bd9f29', lang_code='ar', device_model="MacBook Pro M1", system_version="14.3.1", plugins=dict(root='plugins'), workdir=script_path, parse_mode=ParseMode.HTML,)
-    app2 = Client('myOwnBot', sleep_threshold=30, api_id=3895828, api_hash='5229902a14b2512c35688aa152bd9f29', bot_token="", plugins=dict(root='plugins2'))
+    app2 = Client('myOwnBot', sleep_threshold=30, api_id=3895828, api_hash='5229902a14b2512c35688aa152bd9f29', bot_token="6412725352:AAE0XMeiiERP2HQ-vWbKIVMpmXyOuY1Tyts", plugins=dict(root='plugins2'))
 
     await app2.start()
     await app.start()
