@@ -6,9 +6,11 @@ from pyrogram.types import (
     InlineQuery,
 )
 
+FIRE_THUMB = "https://i.imgur.com/qhYYqZa.png"
+
 
 @Client.on_inline_query(group=2)
-async def inline(client: Client, query: InlineQuery):
+async def inline(_, query: InlineQuery):
     string = query.query.lower()
     if string == "commands":
         help_text = (
@@ -41,7 +43,7 @@ async def inline(client: Client, query: InlineQuery):
                             ]
                         ]
                     ),
-                    thumb_url=client.me.photo,
+                    thumb_url=FIRE_THUMB,
                 ),
             ]
         )
@@ -69,7 +71,7 @@ async def inline(client: Client, query: InlineQuery):
                             ]
                         ]
                     ),
-                    thumb_url=client.me.photo,
+                    thumb_url=FIRE_THUMB,
                 ),
             ]
         )
