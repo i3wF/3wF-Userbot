@@ -6,8 +6,6 @@ from pyrogram.types import (
     InlineQuery,
 )
 
-FIRE_THUMB = "https://i.imgur.com/qhYYqZa.png"
-
 
 @Client.on_inline_query(group=2)
 async def inline(client: Client, query: InlineQuery):
