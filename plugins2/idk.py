@@ -10,7 +10,7 @@ FIRE_THUMB = "https://i.imgur.com/qhYYqZa.png"
 
 
 @Client.on_inline_query(group=2)
-async def inline(_, query: InlineQuery):
+async def inline(client: Client, query: InlineQuery):
     string = query.query.lower()
     if string == "commands":
         help_text = (
@@ -43,7 +43,7 @@ async def inline(_, query: InlineQuery):
                             ]
                         ]
                     ),
-                    thumb_url=FIRE_THUMB,
+                    thumb_url=client.me.photo,
                 ),
             ]
         )
@@ -71,7 +71,7 @@ async def inline(_, query: InlineQuery):
                             ]
                         ]
                     ),
-                    thumb_url=FIRE_THUMB,
+                    thumb_url=client.me.photo,
                 ),
             ]
         )
