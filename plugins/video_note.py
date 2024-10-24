@@ -13,7 +13,9 @@ from utils.misc import modules_help
 from utils.scripts import shell_exec
 
 
-@Client.on_message(~filters.scheduled & command(["vnote"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["vnote"]) & filters.me & ~filters.forwarded
+)
 async def vnote(_: Client, message: Message):
     if not shutil.which("ffmpeg"):
         return await message.edit_text("<b>ffmpeg not installed!</b>")
@@ -58,7 +60,9 @@ async def vnote(_: Client, message: Message):
                 quote=False,
             )
         except VoiceMessagesForbidden:
-            return await message.edit_text("<b>Voice messages forbidden in this chat.</b>")
+            return await message.edit_text(
+                "<b>Voice messages forbidden in this chat.</b>"
+            )
 
 
 module = modules_help.add_module("vnote", __file__)

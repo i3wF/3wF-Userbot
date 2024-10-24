@@ -11,7 +11,9 @@ from utils.misc import modules_help
 from utils.scripts import get_args, get_args_raw, paste_neko, shell_exec, with_premium
 
 
-@Client.on_message(command(["story"]) & filters.me & ~filters.forwarded & ~filters.scheduled)
+@Client.on_message(
+    command(["story"]) & filters.me & ~filters.forwarded & ~filters.scheduled
+)
 @with_premium
 async def post_story(client: Client, message: Message):
     if not shutil.which("ffmpeg"):
@@ -79,7 +81,11 @@ async def post_story(client: Client, message: Message):
                     f"<b>Failed to convert media.</b>\n\nError: {await paste_neko(stderr)}"
                 )
 
-            video_attributes = {"duration": video.duration, "width": 720, "height": 1280}
+            video_attributes = {
+                "duration": video.duration,
+                "width": 720,
+                "height": 1280,
+            }
 
             with open(f"{tempdir}/output.mp4", "rb") as file:
                 downloaded_media = io.BytesIO(file.read())

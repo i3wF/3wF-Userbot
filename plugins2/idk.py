@@ -1,8 +1,13 @@
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram import Client
-from pyrogram.types import InlineQueryResultArticle, InputTextMessageContent, InlineQuery
+from pyrogram.types import (
+    InlineQueryResultArticle,
+    InputTextMessageContent,
+    InlineQuery,
+)
 
 FIRE_THUMB = "https://i.imgur.com/qhYYqZa.png"
+
 
 @Client.on_inline_query(group=2)
 async def inline(_, query: InlineQuery):
@@ -26,9 +31,15 @@ async def inline(_, query: InlineQuery):
                     reply_markup=InlineKeyboardMarkup(
                         [
                             [
-                                InlineKeyboardButton("Community", url="https://t.me/pyrogram"),
-                                InlineKeyboardButton("GitHub", url="https://github.com/pyrogram"),
-                                InlineKeyboardButton("Docs", url="https://docs.pyrogram.org")
+                                InlineKeyboardButton(
+                                    "Community", url="https://t.me/pyrogram"
+                                ),
+                                InlineKeyboardButton(
+                                    "GitHub", url="https://github.com/pyrogram"
+                                ),
+                                InlineKeyboardButton(
+                                    "Docs", url="https://docs.pyrogram.org"
+                                ),
                             ]
                         ]
                     ),
@@ -48,13 +59,19 @@ async def inline(_, query: InlineQuery):
                     reply_markup=InlineKeyboardMarkup(
                         [
                             [
-                                InlineKeyboardButton("Community", url="https://t.me/pyrogram"),
-                                InlineKeyboardButton("GitHub", url="https://github.com/pyrogram"),
-                                InlineKeyboardButton("Docs", url="https://docs.pyrogram.org")
+                                InlineKeyboardButton(
+                                    "Community", url="https://t.me/pyrogram"
+                                ),
+                                InlineKeyboardButton(
+                                    "GitHub", url="https://github.com/pyrogram"
+                                ),
+                                InlineKeyboardButton(
+                                    "Docs", url="https://docs.pyrogram.org"
+                                ),
                             ]
                         ]
                     ),
-                    thumb_url=FIRE_THUMB
+                    thumb_url=FIRE_THUMB,
                 ),
             ]
         )

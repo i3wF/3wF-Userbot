@@ -31,8 +31,26 @@ async def main():
         handlers=[stdout_handler],
     )
 
-    app = Client('myOwnAccount', sleep_threshold=30, api_id=3895828, api_hash='5229902a14b2512c35688aa152bd9f29', lang_code='ar', device_model="MacBook Pro M1", system_version="14.3.1", plugins=dict(root='plugins'), workdir=script_path, parse_mode=ParseMode.HTML,)
-    app2 = Client('myOwnBot', sleep_threshold=30, api_id=3895828, api_hash='5229902a14b2512c35688aa152bd9f29', bot_token="", plugins=dict(root='plugins2'))
+    app = Client(
+        "myOwnAccount",
+        sleep_threshold=30,
+        api_id=3895828,
+        api_hash="5229902a14b2512c35688aa152bd9f29",
+        lang_code="ar",
+        device_model="MacBook Pro M1",
+        system_version="14.3.1",
+        plugins=dict(root="plugins"),
+        workdir=script_path,
+        parse_mode=ParseMode.HTML,
+    )
+    app2 = Client(
+        "myOwnBot",
+        sleep_threshold=30,
+        api_id=3895828,
+        api_hash="5229902a14b2512c35688aa152bd9f29",
+        bot_token="",
+        plugins=dict(root="plugins2"),
+    )
 
     await app2.start()
     await app.start()
@@ -45,7 +63,9 @@ async def main():
     if updater := db.get("core.updater", "restart_info"):
         try:
             if updater["type"] == "restart":
-                logging.info(f"{app.me.username}#{app.me.id} | Userbot succesfully restarted.")
+                logging.info(
+                    f"{app.me.username}#{app.me.id} | Userbot succesfully restarted."
+                )
                 await app.edit_message_text(
                     chat_id=updater["chat_id"],
                     message_id=updater["message_id"],
@@ -80,7 +100,6 @@ async def main():
             f"SEH"
             " | Userbot succesfully started."
         )
-
 
     await idle()
 

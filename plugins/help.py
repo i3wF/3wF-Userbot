@@ -2,7 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 
 from utils.misc import modules_help
-from utils.filters import command 
+from utils.filters import command
 
 
 @Client.on_message(command(["cmds", "shit"]) & filters.me)
@@ -10,7 +10,7 @@ async def cmds(client: Client, message: Message):
     if message.command[0] == "cmds":
         text = "commands"
     elif message.command[0] == "shit":
-        text = "shit"    
+        text = "shit"
     try:
         x = await client.get_inline_bot_results("Hayday3wFbot", text)
         for m in x.results:
@@ -19,6 +19,7 @@ async def cmds(client: Client, message: Message):
             )
     except Exception as error:
         await message.edit(str(error))
+
 
 module = modules_help.add_module("cmds", __file__)
 module.add_command("cmds", "لرؤية الاوامر الخاصة باليوزربوت")

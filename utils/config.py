@@ -37,6 +37,15 @@ proxy_settings = (
         },
         "ipv6": proxy_ipv6,
     }
-    if all((proxy_scheme, proxy_hostname, proxy_port, proxy_username, proxy_password, proxy_ipv6))
+    if all(
+        (
+            proxy_scheme,
+            proxy_hostname,
+            proxy_port,
+            proxy_username,
+            proxy_password,
+            proxy_ipv6,
+        )
+    )
     else {}
 )

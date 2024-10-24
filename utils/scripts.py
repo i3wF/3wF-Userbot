@@ -56,7 +56,9 @@ def restart():
 def get_full_name(obj: Union[User, Chat]) -> str:
     if isinstance(obj, Chat):
         if obj.type == ChatType.PRIVATE:
-            return f"{obj.first_name} {obj.last_name}" if obj.last_name else obj.first_name
+            return (
+                f"{obj.first_name} {obj.last_name}" if obj.last_name else obj.first_name
+            )
         return obj.title
     elif isinstance(obj, User):
         return f"{obj.first_name} {obj.last_name}" if obj.last_name else obj.first_name
@@ -109,7 +111,9 @@ def with_premium(func):
 
 async def paste_neko(code: str):
     try:
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+        async with aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(ssl=False)
+        ) as session:
             async with session.post(
                 "https://nekobin.com/api/documents",
                 json={"content": code},
@@ -194,7 +198,9 @@ class ScheduleJob:
     def __init__(
         self,
         func: callable,
-        trigger: Optional[Union[CronTrigger, IntervalTrigger]] = IntervalTrigger(seconds=3600),
+        trigger: Optional[Union[CronTrigger, IntervalTrigger]] = IntervalTrigger(
+            seconds=3600
+        ),
         *args,
         **kwargs,
     ):
@@ -340,7 +346,9 @@ class ModuleHelp:
         help_text = f"For more help on how to use a command, type <code>{prefix}help [module]</code>\n\n"
         if module is None:
             help_text += "Available Modules:\n"
-            for module_name, module_obj in sorted(self.modules.items(), key=lambda x: x[0]):
+            for module_name, module_obj in sorted(
+                self.modules.items(), key=lambda x: x[0]
+            ):
                 help_text += f"{module_name.title()}:\n"
                 for command_name, command in module_obj.commands.items():
                     help_text += f"• {command_name}: {command.description}\n"
@@ -402,13 +410,9 @@ class ModuleHelp:
         help_text = f"<b>Help for command</b> <code>{prefix}{command.name}</code>\n"
         if command.aliases:
             help_text += "<b>Aliases:</b> "
-            help_text += (
-                f"{' '.join([f'<code>{prefix}{alias}</code>' for alias in command.aliases])}\n"
-            )
+            help_text += f"{' '.join([f'<code>{prefix}{alias}</code>' for alias in command.aliases])}\n"
 
-        help_text += (
-            f"\n<b>Module: {module.name}</b> (<code>{prefix}help {module.name}</code>)\n\n"
-        )
+        help_text += f"\n<b>Module: {module.name}</b> (<code>{prefix}help {module.name}</code>)\n\n"
         help_text += f"<code>{prefix}{command.name}"
 
         if command.args:
@@ -439,10 +443,16 @@ def get_entity_url(
     :return: Link to object or empty string
     """
     return (
-        (f"tg://openmessage?user_id={entity.id}" if openmessage else f"tg://user?id={entity.id}")
+        (
+            f"tg://openmessage?user_id={entity.id}"
+            if openmessage
+            else f"tg://user?id={entity.id}"
+        )
         if isinstance(entity, User)
         else (
-            f"tg://resolve?domain={entity.username}" if getattr(entity, "username", None) else ""
+            f"tg://resolve?domain={entity.username}"
+            if getattr(entity, "username", None)
+            else ""
         )
     )
 

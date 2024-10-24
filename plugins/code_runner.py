@@ -47,7 +47,9 @@ code_result = (
 )
 
 
-@Client.on_message(~filters.scheduled & command(["py", "rpy"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["py", "rpy"]) & filters.me & ~filters.forwarded
+)
 async def python_exec(client: Client, message: Message):
     if len(message.command) == 1 and message.command[0] != "rpy":
         return await message.edit_text("<b>Code to execute isn't provided</b>")
@@ -58,21 +60,30 @@ async def python_exec(client: Client, message: Message):
 
         # Check if message is a reply to message with already executed code
         for entity in message.reply_to_message.entities:
-            if entity.type == enums.MessageEntityType.PRE and entity.language == "python":
-                code = message.reply_to_message.text[entity.offset : entity.offset + entity.length]
+            if (
+                entity.type == enums.MessageEntityType.PRE
+                and entity.language == "python"
+            ):
+                code = message.reply_to_message.text[
+                    entity.offset : entity.offset + entity.length
+                ]
                 break
         else:
             code = message.reply_to_message.text
     else:
         code = message.text.split(maxsplit=1)[1]
 
-    await message.edit_text("<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>")
+    await message.edit_text(
+        "<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>"
+    )
 
     try:
-        code = code.replace("\u00A0", "")
+        code = code.replace("\u00a0", "")
 
         start_time = perf_counter()
-        result = await aexec(code, client, message, timeout=db.get("shell", "timeout", 60))
+        result = await aexec(
+            code, client, message, timeout=db.get("shell", "timeout", 60)
+        )
         stop_time = perf_counter()
 
         # Replace account phone number to anonymous
@@ -150,7 +161,9 @@ async def python_exec(client: Client, message: Message):
         )
 
 
-@Client.on_message(~filters.scheduled & command(["gcc", "rgcc"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["gcc", "rgcc"]) & filters.me & ~filters.forwarded
+)
 async def gcc_exec(_: Client, message: Message):
     if len(message.command) == 1 and message.command[0] != "rgcc":
         return await message.edit_text("<b>Code to execute isn't provided</b>")
@@ -160,7 +173,9 @@ async def gcc_exec(_: Client, message: Message):
     else:
         code = message.text.split(maxsplit=1)[1]
 
-    await message.edit_text("<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>")
+    await message.edit_text(
+        "<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>"
+    )
 
     with tempfile.TemporaryDirectory() as tempdir:
         with tempfile.NamedTemporaryFile("w+", suffix=".c", dir=tempdir) as file:
@@ -242,7 +257,9 @@ async def gcc_exec(_: Client, message: Message):
                 )
 
 
-@Client.on_message(~filters.scheduled & command(["gpp", "rgpp"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["gpp", "rgpp"]) & filters.me & ~filters.forwarded
+)
 async def gpp_exec(_: Client, message: Message):
     if len(message.command) == 1 and message.command[0] != "rgpp":
         return await message.edit_text("<b>Code to execute isn't provided</b>")
@@ -252,7 +269,9 @@ async def gpp_exec(_: Client, message: Message):
     else:
         code = message.text.split(maxsplit=1)[1]
 
-    await message.edit_text("<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>")
+    await message.edit_text(
+        "<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>"
+    )
 
     with tempfile.TemporaryDirectory() as tempdir:
         with tempfile.NamedTemporaryFile("w+", suffix=".cpp", dir=tempdir) as file:
@@ -334,7 +353,9 @@ async def gpp_exec(_: Client, message: Message):
                 )
 
 
-@Client.on_message(~filters.scheduled & command(["lua", "rlua"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["lua", "rlua"]) & filters.me & ~filters.forwarded
+)
 async def lua_exec(_: Client, message: Message):
     if len(message.command) == 1 and message.command[0] != "rlua":
         return await message.edit_text("<b>Code to execute isn't provided</b>")
@@ -344,7 +365,9 @@ async def lua_exec(_: Client, message: Message):
     else:
         code = message.text.split(maxsplit=1)[1]
 
-    await message.edit_text("<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>")
+    await message.edit_text(
+        "<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>"
+    )
 
     with tempfile.TemporaryDirectory() as tempdir:
         with tempfile.NamedTemporaryFile("w+", suffix=".lua", dir=tempdir) as file:
@@ -404,7 +427,9 @@ async def lua_exec(_: Client, message: Message):
                 )
 
 
-@Client.on_message(~filters.scheduled & command(["go", "rgo"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["go", "rgo"]) & filters.me & ~filters.forwarded
+)
 async def go_exec(_: Client, message: Message):
     if len(message.command) == 1 and message.command[0] != "rgo":
         return await message.edit_text("<b>Code to execute isn't provided</b>")
@@ -414,7 +439,9 @@ async def go_exec(_: Client, message: Message):
     else:
         code = message.text.split(maxsplit=1)[1]
 
-    await message.edit_text("<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>")
+    await message.edit_text(
+        "<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>"
+    )
 
     with tempfile.TemporaryDirectory() as tempdir:
         with tempfile.NamedTemporaryFile("w+", suffix=".go", dir=tempdir) as file:
@@ -486,7 +513,9 @@ async def node_exec(_: Client, message: Message):
     else:
         code = message.text.split(maxsplit=1)[1]
 
-    await message.edit_text("<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>")
+    await message.edit_text(
+        "<b><emoji id=5821116867309210830>🔃</emoji> Executing...</b>"
+    )
 
     with tempfile.TemporaryDirectory() as tempdir:
         with tempfile.NamedTemporaryFile("w+", suffix=".js", dir=tempdir) as file:

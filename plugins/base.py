@@ -24,7 +24,9 @@ from utils.scripts import (
 )
 
 
-@Client.on_message(~filters.scheduled & command(["help", "h"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["help", "h"]) & filters.me & ~filters.forwarded
+)
 async def help_cmd(_, message: Message):
     args, _ = get_args(message)
     try:
@@ -37,14 +39,20 @@ async def help_cmd(_, message: Message):
                     await message.edit(text, disable_web_page_preview=True)
                     msg_edited = True
         elif args[0] in modules_help.modules:
-            await message.edit(modules_help.module_help(args[0]), disable_web_page_preview=True)
+            await message.edit(
+                modules_help.module_help(args[0]), disable_web_page_preview=True
+            )
         else:
-            await message.edit(modules_help.command_help(args[0]), disable_web_page_preview=True)
+            await message.edit(
+                modules_help.command_help(args[0]), disable_web_page_preview=True
+            )
     except ValueError as e:
         await message.edit(e)
 
 
-@Client.on_message(~filters.scheduled & command(["restart", "rs"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["restart", "rs"]) & filters.me & ~filters.forwarded
+)
 async def _restart(_: Client, message: Message):
     db.set(
         "core.updater",
@@ -60,7 +68,9 @@ async def _restart(_: Client, message: Message):
     restart()
 
 
-@Client.on_message(~filters.scheduled & command(["update"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["update"]) & filters.me & ~filters.forwarded
+)
 async def _update(_: Client, message: Message):
     await message.edit("<code>Updating...</code>")
     args, nargs = get_args(message)
@@ -125,7 +135,10 @@ async def _update(_: Client, message: Message):
 
 
 @Client.on_message(
-    ~filters.scheduled & command(["kprefix", "prefix"]) & filters.me & ~filters.forwarded
+    ~filters.scheduled
+    & command(["kprefix", "prefix"])
+    & filters.me
+    & ~filters.forwarded
 )
 async def set_prefix(_, message: Message):
     args, _ = get_args(message)
@@ -165,7 +178,9 @@ async def sendmod(client: Client, message: Message):
         await message.reply(format_exc(e), quote=False)
 
 
-@Client.on_message(~filters.scheduled & command(["status", "st"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["status", "st"]) & filters.me & ~filters.forwarded
+)
 async def _status(_, message: Message):
     common_args, _ = get_args(message)
 
@@ -178,8 +193,12 @@ async def _status(_, message: Message):
     ram_usage = get_ram_usage()
     current_time = arrow.get()
     uptime = current_time.shift(seconds=perf_counter() - bot_uptime)
-    kernel_version = subprocess.run(["uname", "-a"], capture_output=True).stdout.decode().strip()
-    system_uptime = subprocess.run(["uptime", "-p"], capture_output=True).stdout.decode().strip()
+    kernel_version = (
+        subprocess.run(["uname", "-a"], capture_output=True).stdout.decode().strip()
+    )
+    system_uptime = (
+        subprocess.run(["uptime", "-p"], capture_output=True).stdout.decode().strip()
+    )
 
     current_hash = git.Repo().head.commit.hexsha
     git.Repo().remote("origin").fetch()
@@ -190,9 +209,7 @@ async def _status(_, message: Message):
         len(list(git.Repo().iter_commits(f"{current_hash}..{upcoming}")))
     )
 
-    result = (
-        f"<emoji id=5830218371160873658>🥵</emoji> <a href='{repo_link}'>3wF-Userbot</a>\n"
-    )
+    result = f"<emoji id=5830218371160873658>🥵</emoji> <a href='{repo_link}'>3wF-Userbot</a>\n"
     result += f"<b>Pyrogram:</b> <code>{pyrogram.__version__}</code>\n"
     result += f"<b>Python:</b> <code>{sys.version}</code>\n"
     result += f"<b>Dev:</b> <a href='{dev_link}'>3wF</a>\n\n"
@@ -201,9 +218,7 @@ async def _status(_, message: Message):
         return await message.edit(result, disable_web_page_preview=True)
 
     result += "<b>Bot status:</b>\n"
-    result += (
-        f"├─<b>Uptime:</b> <code>{uptime.humanize(current_time, only_distance=True)}</code>\n"
-    )
+    result += f"├─<b>Uptime:</b> <code>{uptime.humanize(current_time, only_distance=True)}</code>\n"
     result += f"├─<b>Branch:</b> <code>{branch}</code>\n"
     result += f"├─<b>Current version:</b> <a href='{repo_link}/commit/{current_hash}'>"
     result += f"#{current_hash[:7]} ({current_version})</a>\n"
@@ -224,7 +239,9 @@ async def _status(_, message: Message):
 
 
 module = modules_help.add_module("base", __file__)
-module.add_command("help", "Get common/module/command help.", "[module/command name]", ["h"])
+module.add_command(
+    "help", "Get common/module/command help.", "[module/command name]", ["h"]
+)
 module.add_command("prefix", "Set custom prefix", None, ["kprefix"])
 module.add_command("restart", "Useful when you want to reload a bot")
 module.add_command("update", "Update the userbot from the repository")

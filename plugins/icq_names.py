@@ -414,7 +414,9 @@ names = [
 ]
 
 
-@Client.on_message(~filters.scheduled & command(["icq"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["icq"]) & filters.me & ~filters.forwarded
+)
 async def nickname_handler(client: Client, message: Message):
     args = get_args_raw(message)
     if not args:
@@ -438,7 +440,11 @@ async def nickname_handler(client: Client, message: Message):
         db.set("icq_names", "enabled", True)
         first_name = me.first_name
         last_name = "" if me.last_name is None else me.last_name
-        db.set("icq_names", "original_name", {"first_name": first_name, "last_name": last_name})
+        db.set(
+            "icq_names",
+            "original_name",
+            {"first_name": first_name, "last_name": last_name},
+        )
         try:
             await client.update_profile(first_name=random.choice(names), last_name="")
         except Exception as e:
@@ -453,7 +459,8 @@ async def nickname_handler(client: Client, message: Message):
         original_name = db.get("icq_names", "original_name")
         try:
             await client.update_profile(
-                first_name=original_name["first_name"], last_name=original_name["last_name"]
+                first_name=original_name["first_name"],
+                last_name=original_name["last_name"],
             )
         except Exception as e:
             return await message.edit_text(
@@ -465,7 +472,9 @@ async def nickname_handler(client: Client, message: Message):
     )
 
 
-@Client.on_message(~filters.scheduled & command(["icqr"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["icqr"]) & filters.me & ~filters.forwarded
+)
 async def nickname_random_handler(client: Client, message: Message):
     if not db.get("icq_names", "enabled", False):
         return await message.edit_text(
@@ -481,7 +490,9 @@ async def nickname_random_handler(client: Client, message: Message):
         )
 
 
-@Client.on_message(~filters.scheduled & command(["icqt"]) & filters.me & ~filters.forwarded)
+@Client.on_message(
+    ~filters.scheduled & command(["icqt"]) & filters.me & ~filters.forwarded
+)
 async def nickname_trigger_handler(_: Client, message: Message):
     args = get_args_raw(message)
 
@@ -492,7 +503,9 @@ async def nickname_trigger_handler(_: Client, message: Message):
         if isinstance(job.trigger, CronTrigger):
             fields = ["minute", "hour", "day", "month", "day_of_week"]
             values = {
-                field.name: str(field) for field in job.trigger.fields if field.name in fields
+                field.name: str(field)
+                for field in job.trigger.fields
+                if field.name in fields
             }
             cron_expression = [values[field] for field in fields]
             text = (

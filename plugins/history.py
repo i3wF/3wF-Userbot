@@ -12,7 +12,13 @@ from pyrogram.types import Message
 from utils.db import db
 from utils.filters import command
 from utils.misc import modules_help
-from utils.scripts import get_args, get_args_raw, get_entity_url, get_full_name, get_message_link
+from utils.scripts import (
+    get_args,
+    get_args_raw,
+    get_entity_url,
+    get_full_name,
+    get_message_link,
+)
 
 cache = Cache(Cache.MEMORY, ttl=3600, serializer=PickleSerializer())
 
@@ -70,7 +76,9 @@ async def get_cached_media_group(
     return media_group
 
 
-async def get_input_media_group(client: Client, cached_messages: Iterable[Message], text: str):
+async def get_input_media_group(
+    client: Client, cached_messages: Iterable[Message], text: str
+):
     processed_media_groups_ids = []
     input_media_group = []
 
@@ -146,7 +154,9 @@ async def send_cached_message(
         else:
             await bot.send_document(
                 chat_id=client.me.id,
-                document=aiogram.types.BufferedInputFile(file_bytes.getbuffer(), file_bytes.name),
+                document=aiogram.types.BufferedInputFile(
+                    file_bytes.getbuffer(), file_bytes.name
+                ),
                 caption=text,
             )
     else:
@@ -180,7 +190,9 @@ async def history_log_message_handler(client: Client, message: Message):
     ):
         return
 
-    if message.chat.type == ChatType.CHANNEL and not db.get("history", "is_channels_enabled"):
+    if message.chat.type == ChatType.CHANNEL and not db.get(
+        "history", "is_channels_enabled"
+    ):
         return
 
     await cache.set(message.id, message)
@@ -257,18 +269,26 @@ async def history_on_deleted_handler(client: Client, messages: List[Message]):
 
         if cached_message.media and cached_message.media_group_id:
             if not is_media_group_sent:
-                input_media_group = await get_input_media_group(client, cached_messages, text)
+                input_media_group = await get_input_media_group(
+                    client, cached_messages, text
+                )
                 await send_cached_message(
-                    client=client, cached_message=cached_message, media_group=input_media_group
+                    client=client,
+                    cached_message=cached_message,
+                    media_group=input_media_group,
                 )
                 is_media_group_sent = True
         else:
-            await send_cached_message(client=client, cached_message=cached_message, text=text)
+            await send_cached_message(
+                client=client, cached_message=cached_message, text=text
+            )
 
         await cache.delete(cached_message.id)
 
 
-@Client.on_message(command(["hcfg"]) & filters.me & ~filters.forwarded & ~filters.scheduled)
+@Client.on_message(
+    command(["hcfg"]) & filters.me & ~filters.forwarded & ~filters.scheduled
+)
 async def history_config_handler(client: Client, message: Message):
     args, nargs = get_args(message)
 
@@ -337,7 +357,9 @@ async def history_config_handler(client: Client, message: Message):
     return await message.edit_text(result)
 
 
-@Client.on_message(filters.regex("^\+hwl ") & filters.me & ~filters.forwarded & ~filters.scheduled)
+@Client.on_message(
+    filters.regex("^\+hwl ") & filters.me & ~filters.forwarded & ~filters.scheduled
+)
 async def history_add_whitelist_handler(client: Client, message: Message):
     args = get_args_raw(message)
 
@@ -356,7 +378,9 @@ async def history_add_whitelist_handler(client: Client, message: Message):
     return await message.edit_text("<b>Chat added to whitelist</b>")
 
 
-@Client.on_message(filters.regex("^\-hwl ") & filters.me & ~filters.forwarded & ~filters.scheduled)
+@Client.on_message(
+    filters.regex("^\-hwl ") & filters.me & ~filters.forwarded & ~filters.scheduled
+)
 async def history_remove_whitelist_handler(client: Client, message: Message):
     args = get_args_raw(message)
 
