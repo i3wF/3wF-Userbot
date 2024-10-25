@@ -31,11 +31,15 @@ async def main():
         handlers=[stdout_handler],
     )
 
+    STRING_SESSION = os.getenv("STRING_SESSION")
+    TOKEN = os.getenv("TOKEN")
+
     app = Client(
         "myOwnAccount",
         sleep_threshold=30,
         api_id=3895828,
         api_hash="5229902a14b2512c35688aa152bd9f29",
+        session_string=STRING_SESSION,
         lang_code="ar",
         device_model="MacBook Pro M1",
         system_version="14.3.1",
@@ -47,9 +51,9 @@ async def main():
     app2 = Client(
         "myOwnBot",
         sleep_threshold=30,
+        bot_token=TOKEN,
         api_id=3895828,
         api_hash="5229902a14b2512c35688aa152bd9f29",
-        bot_token="",
         plugins=dict(root="plugins2"),
     )
 
