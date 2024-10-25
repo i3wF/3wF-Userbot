@@ -123,7 +123,7 @@ async def search_command(client: Client, message: Message):
 
 
 @Client.on_message(filters.regex(r"^يوت") & filters.me)
-async def yot(client: Client, message: Message) -> Message:
+async def yot(client: Client, message: Message):
     query = message.text.split(" ", 1)[1] if len(message.text.split(" ")) > 1 else ""
     downloads_dir = "downloads"
     if not os.path.exists(downloads_dir):
