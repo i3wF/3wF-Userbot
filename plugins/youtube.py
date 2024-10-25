@@ -52,7 +52,7 @@ def download_audio(
             "quiet": True,
             "username": "oauth2",
             "password": "",
-            'extractor_args': {'youtube': {'player_client': ['ios']}}
+            "extractor_args": {"youtube": {"player_client": ["ios"]}},
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(link, download=True)
