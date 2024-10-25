@@ -147,11 +147,13 @@ async def yot(client: Client, message: Message):
             duration = results[0]["duration"]
             if video_id in file_ids:
                 audio_id = file_ids[video_id]
-                await message.reply_audio(
-                    audio_id,
-                    caption=f"𝗖𝗵𝗮 ➤ @{client.me.username}",
-                )
-                return
+                try:
+                    return await message.reply_audio(
+                        audio_id,
+                        caption=f"𝗖𝗵𝗮 ➤ @{client.me.username}",
+                    )
+                except:
+                    return
             loop = asyncio.get_event_loop()
             thread = threading.Thread(
                 target=download_audio,
