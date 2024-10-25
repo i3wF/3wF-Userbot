@@ -3,30 +3,14 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 
 from datetime import datetime
-from dotenv import dotenv_values
 import pytz
+import os
 
-env = dotenv_values("./.env")
-
-
-def get_env_value(key: str, to_type, default=None):
-    value = env.get(key)
-    if value is None:
-        return default
-
-    try:
-        return to_type(value)
-    except (TypeError, ValueError) as e:
-        raise ValueError(f"Invalid value for {key}: {value}") from e
+GID = os.getenv("REPLIES_ID")
 
 
-reply_group = get_env_value("REPLY_GROUP", str)
-
-
-@Client.on_message(filters.group & filters.reply)
+@Client.on_message(filters.group & filters.reply & ~filters.me)
 async def reply_to_me(client: Client, message: Message):
-    CMI = client.me.id
-    GID = reply_group
     link = message.link
     user_id = message.from_user.id
     riyadh_timezone = pytz.timezone("Asia/Riyadh")
@@ -39,11 +23,8 @@ async def reply_to_me(client: Client, message: Message):
         if user_info.username
         else f"({name})[tg://user?id={user_id}]"
     )
-    if (
-        message.reply_to_message
-        and message.reply_to_message.from_user.id == CMI
-        and message.from_user.id != CMI
-    ):
+
+    if message.reply_to_message.from_user.id == client.me.id:
         response_message = (
             message.text
             or message.video
@@ -53,37 +34,48 @@ async def reply_to_me(client: Client, message: Message):
             or message.audio
             or message.voice
         )
-        if isinstance(response_message, Video):
-            type = "فيديو"
-            RTM = f"\nيوجد شخصاً ما رد عليك {mention}\nاسمه: {name}\nايديه: {user_id}\nرابط الرسالة : {link}\nنوع الرسالة: {type}\nالوقت: {formatted_time}"
-            await client.send_message(GID, RTM)
-            await client.send_video(GID, video=message.video.file_id)
-        elif isinstance(response_message, Sticker):
-            type = "ملصق"
-            RTM = f"\nيوجد شخصاً ما رد عليك {mention}\nاسمه: {name}\nايديه: {user_id}\nرابط الرسالة : {link}\nنوع الرسالة: {type}\nالوقت: {formatted_time}"
-            await client.send_message(GID, RTM)
-            await client.send_sticker(GID, sticker=message.sticker.file_id)
-        elif isinstance(response_message, Animation):
-            type = "متحرك"
-            RTM = f"\nيوجد شخصاً ما رد عليك {mention}\nاسمه: {name}\nايديه: {user_id}\nرابط الرسالة : {link}\nنوع الرسالة: {type}\nالوقت: {formatted_time}"
-            await client.send_message(GID, RTM)
-            await client.send_animation(GID, animation=message.animation.file_id)
-        elif isinstance(response_message, Photo):
-            type = "صورة"
-            RTM = f"\nيوجد شخصاً ما رد عليك {mention}\nاسمه: {name}\nايديه: {user_id}\nرابط الرسالة : {link}\nنوع الرسالة: {type}\nالوقت: {formatted_time}"
-            await client.send_message(GID, RTM)
-            await client.send_photo(GID, photo=message.photo.file_id)
-        elif isinstance(response_message, Audio):
-            type = "صوتي"
-            RTM = f"\nيوجد شخصاً ما رد عليك {mention}\nاسمه: {name}\nايديه: {user_id}\nرابط الرسالة : {link}\nنوع الرسالة: {type}\nالوقت: {formatted_time}"
-            await client.send_message(GID, RTM)
-            await client.send_audio(GID, audio=message.audio.file_id)
-        elif isinstance(response_message, Voice):
-            type = "فويس"
-            RTM = f"\nيوجد شخصاً ما رد عليك {mention}\nاسمه: {name}\nايديه: {user_id}\nرابط الرسالة : {link}\nنوع الرسالة: {type}\nالوقت: {formatted_time}"
-            await client.send_message(GID, RTM)
-            await client.send_voice(GID, voice=message.voice.file_id)
+
+        async def send_response(message_type, file_id=None, text=None):
+            type_translations = {
+                Video: "فيديو",
+                Sticker: "ملصق",
+                Animation: "متحرك",
+                Photo: "صورة",
+                Audio: "صوتي",
+                Voice: "فويس",
+                str: "نص",
+            }
+
+            type_label = type_translations.get(message_type, "نص")
+
+            RTM = (
+                f"\nيوجد شخصاً ما رد عليك {mention}\n"
+                f"اسمه: {name}\n"
+                f"ايديه: {user_id}\n"
+                f"رابط الرسالة : {link}\n"
+                f"نوع الرسالة: {type_label}\n"
+                f"الوقت: {formatted_time}"
+            )
+
+            if message_type is str and text:
+                RTM += f"\nمحتوى الرسالة: {text}"
+
+            await client.send_message(chat_id=GID, text=RTM)
+
+            if file_id:
+                await {
+                    Video: client.send_video,
+                    Sticker: client.send_sticker,
+                    Animation: client.send_animation,
+                    Photo: client.send_photo,
+                    Audio: client.send_audio,
+                    Voice: client.send_voice,
+                }[message_type](chat_id=GID, **{message_type.__name__.lower(): file_id})
+
+        if isinstance(
+            response_message, (Video, Sticker, Animation, Photo, Audio, Voice)
+        ):
+            await send_response(type(response_message), response_message.file_id)
+
         elif message.text:
-            type = "نص"
-            RTM = f"يوجد شخصاً ما رد عليك {mention}\nاسمه: {name}\nايديه: {user_id}\nرابط الرسالة : {link}\nنوع الرسالة: {type}\nمحتوى الرسالة {message.text}\nالوقت: {formatted_time}"
-            await client.send_message(GID, RTM)
+            await send_response(str, text=message.text)
