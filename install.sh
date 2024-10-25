@@ -64,6 +64,9 @@ echo "Saving configuration to .env file..."
     echo "DB_NAME=3wF"
 } >> .env
 
+echo "Creating file named 3wF..."
+touch 3wF
+
 echo "Creating required Telegram group and saving its ID..."
 
 python3 -c "
