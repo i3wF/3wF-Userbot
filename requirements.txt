@@ -9,9 +9,12 @@ aiocache
 requests
 tgcrypto
 aiogram
+moviepy
 aiohttp
 openai
 psutil
 qrcode
 yt_dlp
+pillow
 arrow
+pytz
