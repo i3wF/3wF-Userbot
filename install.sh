@@ -18,6 +18,10 @@ echo "Installing ffmpeg..."
 apt install -y ffmpeg && echo "✔️  ffmpeg installed." || echo "❌ Failed to install ffmpeg."
 echo ""
 
+echo "Installing Lua..."
+apt install -y lua5.3 && echo "✔️  Lua installed." || echo "❌ Failed to install Lua."
+echo ""
+
 echo "Installing Python3-venv if not installed..."
 apt install -y python3-venv && echo "✔️  Python3-venv installed." || echo "❌ Failed to install Python3-venv."
 echo ""
