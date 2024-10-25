@@ -15,7 +15,7 @@ async def export_session():
         system_version="14.3.1",
     ) as app:
         session_string = await app.export_session_string()
-        app.send_message("me", f"STRING_SESSION: `{session_string}`")
+        await app.send_message("me", f"STRING_SESSION: `{session_string}`")
 
 
 asyncio.run(export_session())
