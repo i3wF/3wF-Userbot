@@ -11,7 +11,6 @@ GID = os.getenv("REPLIES_ID")
 
 @Client.on_message(filters.group & filters.reply & ~filters.me & ~filters.bot)
 async def reply_to_me(client: Client, message: Message):
-    print(f"GID (REPLIES_ID): {GID}")
     link = message.link
     user_id = message.from_user.id
     riyadh_timezone = pytz.timezone("Asia/Riyadh")
@@ -61,7 +60,6 @@ async def reply_to_me(client: Client, message: Message):
             if message_type is str and text:
                 RTM += f"\nمحتوى الرسالة: {text}"
 
-            print(f"RTM message to be sent: {RTM}")
             await client.send_message(chat_id=GID, text=RTM)
 
             if file_id:
