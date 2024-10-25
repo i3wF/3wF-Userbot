@@ -5,16 +5,9 @@ import threading
 import requests
 import asyncio
 import random
-import string
 import yt_dlp
 import json
 import os
-
-
-def generate_random_filename(length=10):
-    """Generate a random filename."""
-    letters_and_digits = string.ascii_letters + string.digits
-    return "".join(random.choice(letters_and_digits) for _ in range(length))
 
 
 async def search_youtube(query):
@@ -51,10 +44,15 @@ def download_audio(
 ):
     try:
         ydl_opts = {
-            "format": "bestaudio[ext=m4a]",
-            "outtmpl": f"{downloads_dir}/{generate_random_filename()}.%(ext)s",
+            "format": "bestaudio",
+            "keepvideo": False,
+            "prefer_ffmpeg": False,
+            "geo_bypass": True,
+            "outtmpl": f"{downloads_dir}/%(id)s.m4a",
+            "quiet": True,
             "username": "oauth2",
             "password": "",
+            'extractor_args': {'youtube': {'player_client': ['ios']}}
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(link, download=True)
