@@ -85,10 +85,21 @@ if [ -z "$REPLIES_ID" ]; then
 import os
 import asyncio
 from pyrogram import Client
+from dotenv import dotenv_values
 
-api_id = int(os.getenv('API_ID'))
-api_hash = os.getenv('API_HASH')
-session_string = os.getenv('STRING_SESSION')
+def get_env_value(key: str, to_type, default=None):
+    value = env.get(key)
+    if value is None:
+        return default
+    try:
+        return to_type(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Invalid value for {key}: {value}") from e
+
+env = dotenv_values("./.env")
+api_id = get_env_value("API_ID", int)
+api_hash = get_env_value("API_HASH", str)
+session_string = get_env_value("STRING_SESSION", str)
 
 async def main():
     async with Client('my_bot', api_id=api_id, api_hash=api_hash, session_string=session_string) as app:
