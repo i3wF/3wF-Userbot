@@ -2,11 +2,23 @@ from pyrogram.types import Sticker, Video, Photo, Animation, Audio, Voice
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
+from dotenv import dotenv_values
 from datetime import datetime
 import pytz
-import os
 
-GID = os.getenv("REPLIES_ID")
+
+def get_env_value(key: str, to_type, default=None):
+    value = env.get(key)
+    if value is None:
+        return default
+    try:
+        return to_type(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Invalid value for {key}: {value}") from e
+
+
+env = dotenv_values("./.env")
+GID = get_env_value("REPLIES_ID", str)
 
 
 @Client.on_message(filters.group & filters.reply & ~filters.me & ~filters.bot)

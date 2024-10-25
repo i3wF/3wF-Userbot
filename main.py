@@ -9,11 +9,25 @@ from pyrogram import Client, idle
 from pyrogram.enums import ParseMode
 
 from utils.db import db
+from dotenv import dotenv_values
 from utils.misc import script_path
 from utils.scripts import CustomFormatter
 
 if script_path != os.getcwd():
     os.chdir(script_path)
+
+
+def get_env_value(key: str, to_type, default=None):
+    value = env.get(key)
+    if value is None:
+        return default
+    try:
+        return to_type(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Invalid value for {key}: {value}") from e
+
+
+env = dotenv_values("./.env")
 
 
 async def main():
@@ -27,11 +41,10 @@ async def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[stdout_handler],
     )
-
-    STRING_SESSION = os.getenv("STRING_SESSION")
-    TOKEN = os.getenv("TOKEN")
-    API_ID = os.getenv("API_ID")
-    API_HASH = os.getenv("API_HASH")
+    STRING_SESSION = get_env_value("STRING_SESSION", str)
+    TOKEN = get_env_value("TOKEN", str)
+    API_ID = get_env_value("API_ID", int)
+    API_HASH = get_env_value("API_HASH", str)
     app = Client(
         "myOwnAccount",
         sleep_threshold=30,
