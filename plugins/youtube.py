@@ -28,7 +28,7 @@ async def send_audio(
         chat_id=chat_id,
         audio=audio_file,
         caption=rep,
-        thumbnail=thumb,
+        thumb=thumb,
         title=title,
         duration=duration,
         reply_to_message_id=msg_id,
