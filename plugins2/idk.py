@@ -86,7 +86,7 @@ def download_audio(
             loop,
         )
         sent_message = sent_message_future.result()
-        save_file_id(video_id, client.me.id, sent_message.audio.file_id)
+        save_file_id(video_id, sent_message.audio.file_id)
         os.remove(new_file)
         os.remove(thumb)
     except Exception as e:
@@ -102,9 +102,10 @@ def download_audio(
         print(e)
 
 
-def load_file_id(bot_id):
+def load_file_id():
+    os.makedirs("Database", exist_ok=True)
     try:
-        with open(f"Database/{bot_id}/file_ids.json", "r") as f:
+        with open(f"Database/file_ids.json", "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
@@ -112,10 +113,11 @@ def load_file_id(bot_id):
         return
 
 
-def save_file_id(query, bot_id, file_id):
-    file_ids = load_file_id(bot_id)
+def save_file_id(query, file_id):
+    file_ids = load_file_id()
     file_ids[query] = file_id
-    with open(f"Database/{bot_id}/file_ids.json", "w") as f:
+    os.makedirs("Database", exist_ok=True)
+    with open(f"Database/file_ids.json", "w") as f:
         json.dump(file_ids, f, indent=2)
 
 
@@ -152,7 +154,7 @@ async def callback_query_handler(client: Client, callback_query: CallbackQuery):
             chat_id=callback_query.message.chat.id,
             message_ids=[callback_query.message.id],
         )
-        file_ids = load_file_id(client.me.id)
+        file_ids = load_file_id()
         url_suffix = video_urls[index][1]
         try:
             video_id = url_suffix.split("watch?v=")[-1].split("&")[0]
@@ -164,7 +166,7 @@ async def callback_query_handler(client: Client, callback_query: CallbackQuery):
                     caption=f"𝗖𝗵𝗮 ➤ @{client.me.username}",
                     reply_to_message_id=msg_id,
                 )
-                save_file_id(video_id, client.me.id, audio_id)
+                save_file_id(video_id, audio_id)
                 user_data.pop(msg_id)
             else:
                 downloads_dir = "downloads"
