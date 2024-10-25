@@ -9,7 +9,7 @@ import os
 GID = os.getenv("REPLIES_ID")
 
 
-@Client.on_message(filters.group & filters.reply & ~filters.me)
+@Client.on_message(filters.group & filters.reply & ~filters.me & ~filters.bot)
 async def reply_to_me(client: Client, message: Message):
     link = message.link
     user_id = message.from_user.id
