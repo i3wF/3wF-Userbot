@@ -63,11 +63,11 @@ if [ -z "$DB_NAME" ]; then
 fi
 
 {
-    echo "STRING_SESSION=$STRING_SESSION"
-    echo "TOKEN=$TOKEN"
+    echo "STRING_SESSION=\"$STRING_SESSION\""
+    echo "TOKEN=\"$TOKEN\""
     echo "API_ID=$API_ID"
-    echo "API_HASH=$API_HASH"
-    echo "DB_NAME=$DB_NAME"
+    echo "API_HASH=\"$API_HASH\""
+    echo "DB_NAME=\"$DB_NAME\""
 } > .env.tmp
 
 if ! cmp -s .env .env.tmp; then
