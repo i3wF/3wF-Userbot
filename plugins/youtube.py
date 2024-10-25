@@ -88,6 +88,7 @@ def download_audio(
 
 
 def load_file_id():
+    os.makedirs("Database", exist_ok=True)
     try:
         with open(f"Database/file_ids.json", "r") as f:
             return json.load(f)
@@ -100,6 +101,7 @@ def load_file_id():
 def save_file_id(query, file_id):
     file_ids = load_file_id()
     file_ids[query] = file_id
+    os.makedirs("Database", exist_ok=True)
     with open(f"Database/file_ids.json", "w") as f:
         json.dump(file_ids, f, indent=2)
 
