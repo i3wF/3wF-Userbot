@@ -107,12 +107,18 @@ EOF
     REPLIES_ID=$(get_env_value "REPLIES_ID")
     if [ -z "$REPLIES_ID" ]; then
         echo "❌ Failed to retrieve REPLIES_ID after attempting to create the group."
+        exit 1
     else
         echo "✔️ REPLIES_ID successfully set to: $REPLIES_ID"
     fi
 
 else
     echo "✔️  REPLIES_ID already set in .env file. Skipping group creation."
+fi
+
+if [ -z "$(get_env_value "REPLIES_ID")" ]; then
+    echo "❌ .env file does not contain REPLIES_ID. Please fix the setup."
+    exit 1
 fi
 
 echo "Creating file named 3wF..."
