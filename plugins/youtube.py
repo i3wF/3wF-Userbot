@@ -71,7 +71,7 @@ def download_audio(
             loop,
         )
         sent_message = sent_message_future.result()
-        save_file_id(video_id, client.me.id, sent_message.audio.file_id)
+        save_file_id(video_id, sent_message.audio.file_id)
         os.remove(new_file)
         os.remove(thumb)
     except Exception as e:
@@ -87,9 +87,9 @@ def download_audio(
         print(e)
 
 
-def load_file_id(bot_id):
+def load_file_id():
     try:
-        with open(f"Database/{bot_id}/file_ids.json", "r") as f:
+        with open(f"Database/file_ids.json", "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
@@ -97,10 +97,10 @@ def load_file_id(bot_id):
         return
 
 
-def save_file_id(query, bot_id, file_id):
-    file_ids = load_file_id(bot_id)
+def save_file_id(query, file_id):
+    file_ids = load_file_id()
     file_ids[query] = file_id
-    with open(f"Database/{bot_id}/file_ids.json", "w") as f:
+    with open(f"Database/file_ids.json", "w") as f:
         json.dump(file_ids, f, indent=2)
 
 
@@ -128,7 +128,7 @@ async def yot(client: Client, message: Message) -> Message:
     downloads_dir = "downloads"
     if not os.path.exists(downloads_dir):
         os.makedirs(downloads_dir)
-    file_ids = load_file_id(client.me.id)
+    file_ids = load_file_id()
     try:
         results = YoutubeSearch(query, max_results=1).to_dict()
         if results:
