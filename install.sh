@@ -6,91 +6,130 @@ echo "==============================="
 echo "This script will guide you through setting up your environment and configuring your userbot."
 echo ""
 
+sleep 5
+
 echo "Updating and upgrading packages..."
-apt update -y && apt upgrade -y
+apt update -y && apt upgrade -y && echo "✔️  Packages updated and upgraded." || echo "❌ Failed to update packages."
 
 echo "Installing Python3-venv if not installed..."
-apt install -y python3-venv
+apt install -y python3-venv && echo "✔️  Python3-venv installed." || echo "❌ Failed to install Python3-venv."
 
 echo "Creating Python virtual environment..."
-python3 -m venv myenv
-source myenv/bin/activate
+python3 -m venv myenv && source myenv/bin/activate && echo "✔️  Virtual environment created and activated." || echo "❌ Failed to create virtual environment."
 
 echo "Installing Python dependencies..."
 if [ ! -f "requirements.txt" ]; then
     echo "Error: requirements.txt not found."
     exit 1
 fi
-pip install -r requirements.txt
+pip install -r requirements.txt && echo "✔️  Dependencies installed." || echo "❌ Failed to install dependencies."
 
-echo "Creating .env file..."
-touch .env
+echo "Creating .env file if it doesn't exist..."
+touch .env && echo "✔️  .env file created." || echo "❌ Failed to create .env file."
 
-echo "Enter your API ID:"
-read -r API_ID
+get_env_value() {
+    grep "^$1=" .env | cut -d'=' -f2
+}
 
-echo "Enter your API Hash:"
-read -r API_HASH
-
-echo "Please enter your bot token:"
-read -r TOKEN
-
-echo "Do you want to provide STRING_SESSION manually or generate it? (enter 'm' for manual or 'g' for generate)"
-read -r session_choice
-
-if [ "$session_choice" = "m" ]; then
-    echo "Please enter your STRING_SESSION:"
-    read -r STRING_SESSION
-elif [ "$session_choice" = "g" ]; then
-    echo "Generating STRING_SESSION..."
-    STRING_SESSION=$(python3 -c "
-from pyrogram import Client
-api_id = $API_ID
-api_hash = '$API_HASH'
-with Client(':memory:', api_id=api_id, api_hash=api_hash) as app:
-    print(app.export_session_string())
-" 2>&1 | tail -n 1)
-else
-    echo "Invalid choice. Please enter 'm' for manual or 'g' for generate."
-    exit 1
+API_ID=$(get_env_value "API_ID")
+if [ -z "$API_ID" ]; then
+    echo "Enter your API ID:"
+    read -r API_ID
 fi
 
-echo "Saving configuration to .env file..."
+API_HASH=$(get_env_value "API_HASH")
+if [ -z "$API_HASH" ]; then
+    echo "Enter your API Hash:"
+    read -r API_HASH
+fi
+
+TOKEN=$(get_env_value "TOKEN")
+if [ -z "$TOKEN" ]; then
+    echo "Please enter your bot token:"
+    read -r TOKEN
+fi
+
+STRING_SESSION=$(get_env_value "STRING_SESSION")
+if [ -z "$STRING_SESSION" ]; then
+    echo "Please enter your STRING_SESSION:"
+    read -r STRING_SESSION
+fi
+
+DB_NAME=$(get_env_value "DB_NAME")
+if [ -z "$DB_NAME" ]; then
+    DB_NAME="3wF"
+fi
+
 {
     echo "STRING_SESSION=$STRING_SESSION"
     echo "TOKEN=$TOKEN"
     echo "API_ID=$API_ID"
     echo "API_HASH=$API_HASH"
-    echo "DB_NAME=3wF"
-} >> .env
+    echo "DB_NAME=$DB_NAME"
+} > .env.tmp
 
-echo "Creating file named 3wF..."
-touch 3wF
+if ! cmp -s .env .env.tmp; then
+    mv .env.tmp .env && echo "✔️  .env file updated with new values." || echo "❌ Failed to update .env file."
+else
+    rm .env.tmp && echo "✔️  .env file is already up-to-date."
+fi
 
-echo "Creating required Telegram group and saving its ID..."
+REPLIES_ID=$(get_env_value "REPLIES_ID")
 
-python3 -c "
+if [ -z "$REPLIES_ID" ]; then
+    echo "REPLIES_ID not found. Attempting to create a group to set it."
+    export API_ID API_HASH STRING_SESSION
+    python3 - <<EOF || { echo "Error creating group or saving its ID."; exit 1; }
 import os
+import asyncio
 from pyrogram import Client
 
-api_id = os.getenv('API_ID')
+api_id = int(os.getenv('API_ID'))
 api_hash = os.getenv('API_HASH')
 session_string = os.getenv('STRING_SESSION')
 
-if api_id is None or api_hash is None or session_string is None:
-    print('Error: One or more environment variables are not set correctly.')
-    exit(1)
+async def main():
+    async with Client('my_bot', api_id=api_id, api_hash=api_hash, session_string=session_string) as app:
+        try:
+            # Attempt to create the group
+            group = await app.create_group("REPLIES", [app.me.username])
+            # Save the group ID to .env
+            with open('.env', 'a') as f:
+                f.write(f'REPLIES_ID={group.id}\n')
+            print(f'✔️ Group created successfully with ID: {group.id}')
+        except Exception as e:
+            print(f"Error creating group: {str(e)}")
 
-app = Client('my_bot', api_id=int(api_id), api_hash=api_hash, session_string=session_string)
+# Running the async function
+if __name__ == '__main__':
+    asyncio.run(main())
+EOF
+    REPLIES_ID=$(get_env_value "REPLIES_ID")
+    if [ -z "$REPLIES_ID" ]; then
+        echo "❌ Failed to retrieve REPLIES_ID after attempting to create the group."
+    else
+        echo "✔️ REPLIES_ID successfully set to: $REPLIES_ID"
+    fi
 
-try:
-    app.start()
-    group = app.create_group('REPLIES')
-    with open('.env', 'a') as f:
-        f.write(f'REPLIES_ID={group.id}\n')
-    print(f'Group created successfully with ID: {group.id}')
-finally:
-    app.stop()
-" || { echo "Error creating groups or saving their IDs."; exit 1; }
+else
+    echo "✔️  REPLIES_ID already set in .env file. Skipping group creation."
+fi
 
-echo "Setup complete!"
+echo "Creating file named 3wF..."
+touch 3wF && echo "✔️  File 3wF created." || echo "❌ Failed to create file 3wF."
+
+echo "==============================="
+echo " 🎉 Setup Complete! 🎉"
+echo "==============================="
+echo "3wF UserBot has been successfully set up! You are now ready to run your bot."
+echo ""
+
+sleep 5
+
+echo "==============================="
+echo " Launching 3wF UserBot... 🚀"
+echo "==============================="
+echo "The bot will now start running. Enjoy using your custom bot!"
+echo ""
+
+python3 main.py && echo "✔️  main.py started successfully." || echo "❌ Failed to start main.py."
