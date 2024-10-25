@@ -1,5 +1,7 @@
 #!/bin/bash
 
+clear
+
 echo "==============================="
 echo " Welcome to 3wF UserBot Setup!"
 echo "==============================="
@@ -91,16 +93,13 @@ session_string = os.getenv('STRING_SESSION')
 async def main():
     async with Client('my_bot', api_id=api_id, api_hash=api_hash, session_string=session_string) as app:
         try:
-            # Attempt to create the group
             group = await app.create_group("REPLIES", [app.me.username])
-            # Save the group ID to .env
             with open('.env', 'a') as f:
-                f.write(f'REPLIES_ID={group.id}\n')
+                f.write(f'REPLIES_ID="{group.id}"\n')
             print(f'✔️ Group created successfully with ID: {group.id}')
         except Exception as e:
             print(f"Error creating group: {str(e)}")
 
-# Running the async function
 if __name__ == '__main__':
     asyncio.run(main())
 EOF
