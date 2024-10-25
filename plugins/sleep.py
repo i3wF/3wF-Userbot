@@ -2,12 +2,9 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
-from utils.misc import modules_help
-from utils.filters import command
 
-
-@Client.on_message(command("بنام") & filters.me)
-async def example_send(client: Client, message: Message):
+@Client.on_message(filters.regex(r"^بنام$") & filters.me)
+async def going_sleep(client: Client, message: Message):
     chat_id = message.chat.id
     await message.edit("بنام تصبحون على ما تمسون")
     await client.send_sticker(
@@ -16,8 +13,8 @@ async def example_send(client: Client, message: Message):
     )
 
 
-@Client.on_message(command("نوم") & filters.me)
-async def example_send(client: Client, message: Message):
+@Client.on_message(filters.regex(r"^نوم$") & filters.me)
+async def sleep(client: Client, message: Message):
     chat_id = message.chat.id
     await message.edit(
         "نوم العوافي",
@@ -31,8 +28,8 @@ async def example_send(client: Client, message: Message):
     )
 
 
-@Client.on_message(command("نام") & filters.me)
-async def example_send(client: Client, message: Message):
+@Client.on_message(filters.regex(r"^نام$") & filters.me)
+async def goto_sleep(client: Client, message: Message):
     chat_id = message.chat.id
     await message.edit("نام بالله")
     await client.send_sticker(
@@ -41,18 +38,11 @@ async def example_send(client: Client, message: Message):
     )
 
 
-@Client.on_message(command("نامي") & filters.me)
-async def example_send(client: Client, message: Message):
+@Client.on_message(filters.regex(r"^نامي$") & filters.me)
+async def goto_sleep2(client: Client, message: Message):
     chat_id = message.chat.id
     await message.edit("نامي بالله")
     await client.send_sticker(
         chat_id,
         sticker="CAACAgIAAxkBAAEMVFtmHKeFuyoqdeMF-fH_Pe_lodCp8gAC5zYAAlznmUh05CgmiJEEIzQE",
     )
-
-
-module = modules_help.add_module("النوم", __file__)
-module.add_command("نامي", "لتنويم البنات اكتب هيك")
-module.add_command("نام", "لتنويم العيال اكتب هيك")
-module.add_command("نوم", "لتمني بالنومة الهنيئة")
-module.add_command("بنام", "لتنويم نفسك")

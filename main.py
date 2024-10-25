@@ -43,6 +43,7 @@ async def main():
         workdir=script_path,
         parse_mode=ParseMode.HTML,
     )
+
     app2 = Client(
         "myOwnBot",
         sleep_threshold=30,
@@ -52,13 +53,12 @@ async def main():
         plugins=dict(root="plugins2"),
     )
 
-    await app2.start()
     await app.start()
-
-    async for _ in app.get_dialogs(limit=100):
-        pass
+    async for dialog in app.get_dialogs(limit=100):
+        logging.info(f"Dialog: {dialog.chat.title}")
 
     await app.storage.save()
+    await app2.start()
 
     if updater := db.get("core.updater", "restart_info"):
         try:
