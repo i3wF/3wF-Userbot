@@ -1,9 +1,6 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
-from utils.misc import modules_help
-from utils.filters import command
-
 
 @Client.on_message(filters.new_chat_members)
 async def join_3wF(client: Client, message: Message):
