@@ -1,8 +1,6 @@
 import asyncio
-import contextlib
 import logging
 import os
-import platform
 from time import perf_counter
 from traceback import print_exc
 
@@ -10,9 +8,8 @@ import git
 from pyrogram import Client, idle
 from pyrogram.enums import ParseMode
 
-from utils import config
 from utils.db import db
-from utils.misc import scheduler, scheduler_jobs, script_path
+from utils.misc import script_path
 from utils.scripts import CustomFormatter
 
 if script_path != os.getcwd():
@@ -33,12 +30,13 @@ async def main():
 
     STRING_SESSION = os.getenv("STRING_SESSION")
     TOKEN = os.getenv("TOKEN")
-
+    API_ID = os.getenv("API_ID") 
+    API_HASH= os.getenv("API_HASH")
     app = Client(
         "myOwnAccount",
         sleep_threshold=30,
-        api_id=3895828,
-        api_hash="5229902a14b2512c35688aa152bd9f29",
+        api_id=API_ID,
+        api_hash=API_HASH,
         session_string=STRING_SESSION,
         lang_code="ar",
         device_model="MacBook Pro M1",
@@ -52,8 +50,8 @@ async def main():
         "myOwnBot",
         sleep_threshold=30,
         bot_token=TOKEN,
-        api_id=3895828,
-        api_hash="5229902a14b2512c35688aa152bd9f29",
+        api_id=API_ID,
+        api_hash=API_HASH,
         plugins=dict(root="plugins2"),
     )
 
@@ -106,8 +104,8 @@ async def main():
         )
 
     await idle()
-
     await app.stop()
+    await app2.stop()
 
 
 if __name__ == "__main__":
