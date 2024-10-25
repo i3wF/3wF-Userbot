@@ -70,18 +70,27 @@ touch 3wF
 echo "Creating required Telegram group and saving its ID..."
 
 python3 -c "
-from pyrogram import Client
 import os
+from pyrogram import Client
 
-app = Client('my_bot', api_id=int(os.getenv('API_ID')), api_hash=os.getenv('API_HASH'), session_string=os.getenv('STRING_SESSION'))
-app.start()
+api_id = os.getenv('API_ID')
+api_hash = os.getenv('API_HASH')
+session_string = os.getenv('STRING_SESSION')
 
-group = app.create_group('REPLIES')
+if api_id is None or api_hash is None or session_string is None:
+    print('Error: One or more environment variables are not set correctly.')
+    exit(1)
 
-with open('.env', 'a') as f:
-    f.write(f'REPLIES_ID={group.id}\n')
+app = Client('my_bot', api_id=int(api_id), api_hash=api_hash, session_string=session_string)
 
-app.stop()
+try:
+    app.start()
+    group = app.create_group('REPLIES')
+    with open('.env', 'a') as f:
+        f.write(f'REPLIES_ID={group.id}\n')
+    print(f'Group created successfully with ID: {group.id}')
+finally:
+    app.stop()
 " || { echo "Error creating groups or saving their IDs."; exit 1; }
 
 echo "Setup complete!"
