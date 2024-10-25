@@ -129,7 +129,7 @@ def time_to_seconds(time):
 user_data = {}
 
 
-@Client.on_callback_query(group=610)
+@Client.on_callback_query(group=1)
 async def callback_query_handler(client: Client, callback_query: CallbackQuery):
     data = callback_query.data
     if data.startswith("r_"):
@@ -206,7 +206,7 @@ async def callback_query_handler(client: Client, callback_query: CallbackQuery):
         user_data.pop(msg_id)
 
 
-@Client.on_inline_query(group=2)
+@Client.on_inline_query(group=1)
 async def inline(_, query: InlineQuery):
     string = query.query.lower()
     if string == "commands":

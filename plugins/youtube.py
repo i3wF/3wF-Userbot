@@ -24,15 +24,18 @@ async def search_youtube(query):
 async def send_audio(
     client: Client, chat_id, msg_id, audio_file, rep, thumb, title, duration
 ):
-    return await client.send_audio(
-        chat_id=chat_id,
-        audio=audio_file,
-        caption=rep,
-        thumb=thumb,
-        title=title,
-        duration=duration,
-        reply_to_message_id=msg_id,
-    )
+    try:
+        return await client.send_audio(
+            chat_id=chat_id,
+            audio=audio_file,
+            caption=rep,
+            thumb=thumb,
+            title=title,
+            duration=duration,
+            reply_to_message_id=msg_id,
+        )
+    except:
+        return
 
 
 async def send_message(client: Client, chat_id, msg_id, text):
