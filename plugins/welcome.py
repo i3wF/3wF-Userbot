@@ -3,7 +3,7 @@ from pyrogram.types import Message
 
 
 @Client.on_message(
-    filters.regex(r"السلام عليكم|السلام|السلام عليكم ورحمة الله وبركاته|سلام عليكم")
+    filters.regex(r"^السلام عليكم^|السلام^|السلام عليكم ورحمة الله وبركاته^|سلام عليكم")
     & filters.private
     & ~filters.me
 )
