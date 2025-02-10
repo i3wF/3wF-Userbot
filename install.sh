@@ -168,4 +168,4 @@ echo "==============================="
 echo "The bot will now start running. Enjoy using your custom bot!"
 echo ""
 
-python3 main.py && echo "✔️  main.py started successfully." || echo "❌ Failed to start main.py."
+python3 -B main.py && echo "✔️  main.py started successfully." || echo "❌ Failed to start main.py."

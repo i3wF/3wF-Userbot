@@ -9,7 +9,7 @@ aiocache
 requests
 tgcrypto
 aiogram
-moviepy
+moviepy==1.0.3
 aiohttp
 openai
 psutil
