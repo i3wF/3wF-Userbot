@@ -71,7 +71,7 @@ async def protection_config_handler(client: Client, message: Message):
     if not args:
         return await message.edit_text(
             "<b>تكوين الحماية الحالي:</b>\n"
-            f'الحماية: <code>{bool(db.get("protection", "enabled"))}</code>\n'
+            f"الحماية: <code>{bool(db.get('protection', 'enabled'))}</code>\n"
         )
     result = ""
     enable_states = {"on": True, "off": False}

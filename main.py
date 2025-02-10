@@ -111,9 +111,7 @@ async def main():
         db.remove("core.updater", "restart_info")
     else:
         logging.info(
-            f"{app.me.username}#{app.me.id} on SEH"
-            f"SEH"
-            " | Userbot succesfully started."
+            f"{app.me.username}#{app.me.id} on SEHSEH | Userbot succesfully started."
         )
 
     await idle()

@@ -295,11 +295,11 @@ async def history_config_handler(client: Client, message: Message):
     if not args:
         return await message.edit_text(
             "<b>Current config:</b>\n"
-            f'Enabled: <code>{bool(db.get("history", "enabled"))}</code>\n'
-            f'Bot token set: <code>{bool(db.get("history", "bot_token"))}</code>\n'
-            f'Max to show: <code>{db.get("history", "max_to_show", DEFAULT_MAX_TO_SHOW)}</code>\n'
-            f'Chat logging: <code>{bool(db.get("history", "is_chats_enabled"))}</code>\n'
-            f'Channels logging: <code>{bool(db.get("history", "is_channels_enabled"))}</code>'
+            f"Enabled: <code>{bool(db.get('history', 'enabled'))}</code>\n"
+            f"Bot token set: <code>{bool(db.get('history', 'bot_token'))}</code>\n"
+            f"Max to show: <code>{db.get('history', 'max_to_show', DEFAULT_MAX_TO_SHOW)}</code>\n"
+            f"Chat logging: <code>{bool(db.get('history', 'is_chats_enabled'))}</code>\n"
+            f"Channels logging: <code>{bool(db.get('history', 'is_channels_enabled'))}</code>"
         )
 
     result = ""

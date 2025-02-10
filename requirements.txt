@@ -1,5 +1,6 @@
 https://github.com/coletdjnz/yt-dlp-youtube-oauth2/archive/refs/heads/master.zip
 https://github.com/KurimuzonAkuma/pyrogram/archive/dev.zip
+moviepy==1.0.3
 youtube_search
 python-dotenv
 apscheduler
@@ -9,7 +10,6 @@ aiocache
 requests
 tgcrypto
 aiogram
-moviepy==1.0.3
 aiohttp
 openai
 psutil
@@ -17,4 +17,5 @@ qrcode
 yt_dlp
 pillow
 arrow
+redis
 pytz
