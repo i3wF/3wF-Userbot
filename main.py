@@ -6,6 +6,7 @@ from traceback import print_exc
 
 import git
 from pyrogram import Client, idle
+from convopyro import Conversation
 from pyrogram.enums import ParseMode
 
 from utils.db import db
@@ -67,6 +68,7 @@ async def main():
         api_hash=API_HASH,
         plugins=dict(root="plugins2"),
     )
+    Conversation(app2)
 
     await app.start()
     async for dialog in app.get_dialogs(limit=100):

@@ -50,7 +50,7 @@ class CustomFormatter(logging.Formatter):
 
 
 def restart():
-    os.execvp(sys.executable, [sys.executable, *sys.argv])
+    os.execvp(sys.executable, [sys.executable, "-b", *sys.argv])
 
 
 def get_full_name(obj: Union[User, Chat]) -> str:

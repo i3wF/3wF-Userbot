@@ -72,11 +72,7 @@ async def reply_to_me(client: Client, message: Message):
         if user_info.username
         else f"({name})[tg://user?id={user_id}]"
     )
-    replied_msg_id = (
-        message.reply_to_message.from_user.id
-        if message.reply_to_message.from_user.id
-        else message.reply_to_message.sender_chat.id
-    )
+    replied_msg_id = message.reply_to_message.from_user.id
     if replied_msg_id == client.me.id:
         response_message = (
             message.text

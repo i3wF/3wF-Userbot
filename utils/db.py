@@ -1,11 +1,90 @@
-import asyncio
-import json
-import sqlite3
 import threading
+import asyncio
+import sqlite3
+import orjson
+import redis
+import json
 
 import aiosqlite
 
 from utils.config import db_name
+
+
+class RedisHandler:
+    def __init__(self, redis_host="localhost", redis_port=6379, redis_db=0):
+        self.redis_client = redis.StrictRedis(
+            host=redis_host,
+            port=redis_port,
+            db=redis_db,
+            decode_responses=True,
+            charset="utf-8",
+        )
+
+    def _get_redis_key(self, bot_id, key):
+        return f"bot:{bot_id}:{key}"
+
+    def save_dict(self, bot_id, key, data):
+        if not isinstance(data, dict):
+            raise ValueError("The provided data is not a dictionary.")
+        redis_key = self._get_redis_key(bot_id, key)
+        self.redis_client.set(redis_key, orjson.dumps(data))
+
+    def load_dict(self, bot_id, key):
+        redis_key = self._get_redis_key(bot_id, key)
+        data = self.redis_client.get(redis_key)
+        if data is None:
+            self.save_dict(bot_id, key, {})
+            return {}
+        data = orjson.loads(data)
+        if not isinstance(data, dict):
+            raise ValueError("The loaded data is not a dictionary.")
+        return data
+
+    def save_list(self, bot_id, key, data):
+        if not isinstance(data, list):
+            raise ValueError("The provided data is not a list.")
+        redis_key = self._get_redis_key(bot_id, key)
+        self.redis_client.set(redis_key, orjson.dumps(data))
+
+    def load_list(self, bot_id, key):
+        redis_key = self._get_redis_key(bot_id, key)
+        data = self.redis_client.get(redis_key)
+        if data is None:
+            self.save_list(bot_id, key, [])
+            return []
+        data = orjson.loads(data)
+        if not isinstance(data, list):
+            raise ValueError("The loaded data is not a list.")
+        return data
+
+    def set_key(self, bot_id, key, value):
+        redis_key = self._get_redis_key(bot_id, key)
+        self.redis_client.set(redis_key, value)
+
+    def get_key(self, bot_id, key):
+        redis_key = self._get_redis_key(bot_id, key)
+        value = self.redis_client.get(redis_key)
+        if value is not None:
+            return value.decode("utf-8")
+        return None
+
+    def delete_key(self, bot_id, key):
+        redis_key = self._get_redis_key(bot_id, key)
+        self.redis_client.delete(redis_key)
+
+    def hset(self, redis_key, mapping):
+        if not isinstance(mapping, dict):
+            raise ValueError("Mapping must be a dictionary.")
+        self.redis_client.hset(redis_key, mapping=mapping)
+
+    def lpush(self, redis_key, value):
+        self.redis_client.lpush(redis_key, value)
+
+    def hgetall(self, redis_key):
+        return self.redis_client.hgetall(redis_key)
+
+    def keys(self, pattern="*"):
+        return self.redis_client.keys(pattern)
 
 
 class Database:
