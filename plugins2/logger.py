@@ -33,9 +33,12 @@ async def format_date(timestamp):
 
 
 async def fetch_messages(user_id, message_type, search_term=None, page=1):
-    keys = redis_handler.keys(f"{message_type}:{user_id}:*")
-    print(message_type)
-    print(keys)
+    if message_type == "group":
+        keys = redis_handler.keys(f"{ChatType.GROUP}:{user_id}:*") + redis_handler.keys(
+            f"{ChatType.SUPERGROUP}:{user_id}:*"
+        )
+    else:
+        keys = redis_handler.keys(f"{message_type}:{user_id}:*")
     if not keys:
         return "🚫 لا توجد رسائل لهذا المستخدم.", None
 
@@ -54,13 +57,12 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
     start_index = (page - 1) * messages_per_page
     end_index = start_index + messages_per_page
     keys_to_display = keys[start_index:end_index]
-    message_type_ar = (
-        "الخاص"
-        if message_type == ChatType.PRIVATE
-        else "القروبات"
-        if message_type == ChatType.GROUP
-        else message_type
-    )
+    if message_type == ChatType.GROUP or ChatType.SUPERGROUP:
+        message_type_ar = "القروب"
+    elif message_type == ChatType.PRIVATE:
+        message_type_ar = "الخاص"
+    else:
+        message_type_ar = message_type
     result = f"📊 نتائج الاستعلام في- {message_type_ar}:\n"
     result += f"📥 إجمالي الرسائل: {total_messages}\n\n"
 
@@ -180,13 +182,7 @@ async def handle_callback_query(client: Client, callback_query: CallbackQuery):
 
     elif data[0] in ["private", "group"]:
         message_type = data[0]
-        message_type = (
-            ChatType.PRIVATE
-            if message_type == "private"
-            else ChatType.GROUP or ChatType.SUPERGROUP
-            if message_type == "group"
-            else message_type
-        )
+        message_type = ChatType.PRIVATE if message_type == "private" else message_type
         user_id = data[1]
         result, reply_markup = await fetch_messages(user_id, message_type)
         await callback_query.message.edit_text(
