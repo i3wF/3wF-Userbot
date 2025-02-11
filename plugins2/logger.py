@@ -49,11 +49,20 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
     if not keys:
         return f"🚫 لا توجد رسائل تحتوي على الكلمة '{search_term}'.", None
 
+    total_messages = len(keys)
     messages_per_page = 3
     start_index = (page - 1) * messages_per_page
     end_index = start_index + messages_per_page
     keys_to_display = keys[start_index:end_index]
-    result = f"📊 نتائج الاستعلام - {message_type}:\n\n"
+    message_type_ar = (
+        ChatType.PRIVATE
+        if message_type == "الخاص"
+        else ChatType.GROUP
+        if message_type == "القروبات"
+        else message_type
+    )
+    result = f"📊 نتائج الاستعلام في- {message_type_ar}:\n\n"
+    result += f"📥 إجمالي الرسائل: {total_messages}\n\n"
 
     for key in keys_to_display:
         message_data = redis_handler.hgetall(key)
