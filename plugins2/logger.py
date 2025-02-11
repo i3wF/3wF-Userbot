@@ -183,7 +183,7 @@ async def handle_callback_query(client: Client, callback_query: CallbackQuery):
         message_type = (
             ChatType.PRIVATE
             if message_type == "private"
-            else ChatType.GROUP
+            else ChatType.GROUP or ChatType.SUPERGROUP
             if message_type == "group"
             else message_type
         )
