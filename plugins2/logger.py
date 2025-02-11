@@ -130,6 +130,105 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
     return result, reply_markup
 
 
+async def fetch_messages_for_all_types(user_id, search_term, page=1):
+    message_types = [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP]
+    result = ""
+    keys_to_display = []
+
+    for message_type in message_types:
+        keys = redis_handler.keys(f"{message_type}:{user_id}:*")
+        if not keys:
+            result += f"🚫 لا توجد رسائل من نوع {message_type} لهذا المستخدم.\n"
+            continue
+
+        if search_term:
+            keys = [
+                key
+                for key in keys
+                if search_term.lower() in redis_handler.hget(key, "text").lower()
+            ]
+
+        if not keys:
+            result += f"🚫 لا توجد رسائل تحتوي على الكلمة '{search_term}' من نوع {message_type}.\n"
+            continue
+
+        total_messages = len(keys)
+        messages_per_page = 3
+        start_index = (page - 1) * messages_per_page
+        end_index = start_index + messages_per_page
+        keys_to_display.extend(keys[start_index:end_index])
+
+        result += f"📊 نتائج الاستعلام في- {message_type}:\n"
+        result += f"📥 إجمالي الرسائل: {total_messages}\n\n"
+
+    if not keys_to_display:
+        return "🚫 لا توجد رسائل لهذا المستخدم بنوع الرسالة المحدد."
+
+    for key in keys_to_display:
+        message_data = redis_handler.hgetall(key)
+        msg_type = message_data.get("message_type")
+        msg_type_map = {
+            "text": "نص",
+            "contact": "جهة اتصال",
+            "location": "موقع",
+            "animation": "صورة متحركة",
+            "sticker": "ملصق",
+            "voice": "رسالة صوتية",
+            "audio": "صوت",
+            "video": "فيديو",
+            "document": "ملف",
+            "photo": "صورة",
+        }
+        formatted_msg_type = msg_type_map.get(msg_type, "غير معروف")
+
+        if msg_type == "text":
+            message_info = (
+                f"📅 التاريخ: {await format_date(message_data.get('date'))}\n"
+                f"✉️ نوع الرسالة: {formatted_msg_type}\n"
+                f"📝 النص: {message_data.get('text')}\n"
+            )
+        else:
+            message_info = (
+                f"📅 التاريخ: {await format_date(message_data.get('date'))}\n"
+                f"✉️ نوع الرسالة: {formatted_msg_type}\n"
+                f"📎 الكابشن: {message_data.get('caption')}\n"
+                f"📂 ملف ID: {message_data.get('file_id')}\n"
+            )
+        file_id = message_data.get("file_id")
+        if file_id != "none" and file_id:
+            message_info += f"🔗 [تحميل الميديا]({file_id})\n"
+
+        result += message_info
+        result += "\n--------------------------\n"
+
+    total_pages = len(keys_to_display) // messages_per_page + (
+        1 if len(keys_to_display) % messages_per_page > 0 else 0
+    )
+
+    reply_markup = None
+    if total_pages > 1:
+        buttons = []
+        if page > 1:
+            buttons.append(
+                InlineKeyboardButton(
+                    "◀️ السابق",
+                    callback_data=f"page:{user_id}:all:{search_term}:{page - 1}",
+                )
+            )
+        if page < total_pages:
+            buttons.append(
+                InlineKeyboardButton(
+                    "التالي ▶️",
+                    callback_data=f"page:{user_id}:all:{search_term}:{page + 1}",
+                )
+            )
+
+        reply_markup = InlineKeyboardMarkup([buttons])
+        result += f"\n📜 صفحة {page}/{total_pages}"
+
+    return result, reply_markup
+
+
 @Client.on_message(
     filters.command("check") & filters.user(int(os.getenv("USER_ID"))), group=13
 )
@@ -197,8 +296,8 @@ async def handle_callback_query(client: Client, callback_query: CallbackQuery):
                 client, callback_query.message.chat.id, timeout=60
             )
             search_term = answer.text
-            result, reply_markup = await fetch_messages(
-                user_id, ChatType.PRIVATE, search_term, parse_mode=ParseMode.DISABLED
+            result, reply_markup = await fetch_messages_for_all_types(
+                user_id, search_term
             )
             await answer.reply(
                 result, reply_markup=reply_markup, parse_mode=ParseMode.DISABLED
