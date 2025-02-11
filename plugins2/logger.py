@@ -35,7 +35,7 @@ async def format_date(timestamp):
 
 async def fetch_messages(user_id, message_type, search_term=None, page=1):
     keys = redis_handler.keys(f"{message_type}:{user_id}:*")
-
+    print(keys)
     if not keys:
         return "🚫 لا توجد رسائل لهذا المستخدم.", None
 
