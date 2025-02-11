@@ -26,8 +26,8 @@ async def format_date(timestamp):
         if isinstance(timestamp, str):
             timestamp = float(timestamp)
         riyadh_timezone = pytz.timezone("Asia/Riyadh")
-        current_time = datetime.now(riyadh_timezone)
-        formatted_time = timestamp.strftime("%Y-%m-%d %I:%M %p")
+        datetime_obj = datetime.fromtimestamp(timestamp, riyadh_timezone)
+        formatted_time = datetime_obj.strftime("%Y-%m-%d %I:%M %p")
         return formatted_time
     except ValueError:
         return "التاريخ غير متاح"
