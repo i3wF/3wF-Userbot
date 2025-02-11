@@ -86,6 +86,9 @@ class RedisHandler:
     def keys(self, pattern="*"):
         return self.redis_client.keys(pattern)
 
+    def hget(self, redis_key, field):
+        return self.redis_client.hget(redis_key, field)
+
 
 class Database:
     def get(self, module: str, variable: str, default=None):
