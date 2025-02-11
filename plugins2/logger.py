@@ -55,10 +55,10 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
     end_index = start_index + messages_per_page
     keys_to_display = keys[start_index:end_index]
     message_type_ar = (
-        ChatType.PRIVATE
-        if message_type == "الخاص"
-        else ChatType.GROUP
-        if message_type == "القروبات"
+        "الخاص"
+        if message_type == ChatType.PRIVATE
+        else "القروبات"
+        if message_type == ChatType.GROUP
         else message_type
     )
     result = f"📊 نتائج الاستعلام في- {message_type_ar}:\n\n"
