@@ -67,18 +67,29 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
     for key in keys_to_display:
         message_data = redis_handler.hgetall(key)
         msg_type = message_data.get("message_type")
-        print(message_data)
-
+        msg_type_map = {
+            "text": "نص",
+            "contact": "جهة اتصال",
+            "location": "موقع",
+            "animation": "صورة متحركة",
+            "sticker": "ملصق",
+            "voice": "رسالة صوتية",
+            "audio": "صوت",
+            "video": "فيديو",
+            "document": "ملف",
+            "photo": "صورة",
+        }
+        formatted_msg_type = msg_type_map.get(msg_type, "غير معروف")
         if msg_type == "text":
             message_info = (
                 f"📅 التاريخ: {await format_date(message_data.get('date'))}\n"
-                f"✉️ نوع الرسالة: {msg_type}\n"
+                f"✉️ نوع الرسالة: {formatted_msg_type}\n"
                 f"📝 النص: {message_data.get('text')}\n"
             )
         else:
             message_info = (
                 f"📅 التاريخ: {await format_date(message_data.get('date'))}\n"
-                f"✉️ نوع الرسالة: {msg_type}\n"
+                f"✉️ نوع الرسالة: {formatted_msg_type}\n"
                 f"📎 الكابشن: {message_data.get('caption')}\n"
                 f"📂 ملف ID: {message_data.get('file_id')}\n"
             )
