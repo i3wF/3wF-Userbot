@@ -61,7 +61,7 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
         if message_type == ChatType.GROUP
         else message_type
     )
-    result = f"📊 نتائج الاستعلام في- {message_type_ar}:\n\n"
+    result = f"📊 نتائج الاستعلام في- {message_type_ar}:\n"
     result += f"📥 إجمالي الرسائل: {total_messages}\n\n"
 
     for key in keys_to_display:
