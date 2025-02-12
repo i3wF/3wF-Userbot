@@ -53,6 +53,7 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
     if not keys:
         return f"🚫 لا توجد رسائل تحتوي على الكلمة '{search_term}'.", None
 
+    reply_markup = None
     total_messages = len(keys)
     messages_per_page = 3
     start_index = (page - 1) * messages_per_page
@@ -114,7 +115,6 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
         1 if len(keys) % messages_per_page > 0 else 0
     )
 
-    reply_markup = None
     if total_pages > 1:
         buttons = []
         if page > 1:
@@ -176,6 +176,8 @@ async def fetch_messages_for_all_types(user_id, search_term, page=1):
     if not keys_to_display:
         return "🚫 لا توجد رسائل لهذا المستخدم بنوع الرسالة المحدد."
 
+    reply_markup = None
+
     for key in keys_to_display:
         message_data = redis_handler.hgetall(key)
         msg_type = message_data.get("message_type")
@@ -226,7 +228,6 @@ async def fetch_messages_for_all_types(user_id, search_term, page=1):
         1 if len(keys_to_display) % messages_per_page > 0 else 0
     )
 
-    reply_markup = None
     if total_pages > 1:
         buttons = []
         if page > 1:
