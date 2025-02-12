@@ -30,24 +30,6 @@ def get_env_value(key: str, to_type, default=None):
 
 env = dotenv_values("./.env")
 
-STRING_SESSION = get_env_value("STRING_SESSION", str)
-TOKEN = get_env_value("TOKEN", str)
-API_ID = get_env_value("API_ID", int)
-API_HASH = get_env_value("API_HASH", str)
-app = Client(
-    "myOwnAccount",
-    sleep_threshold=30,
-    api_id=API_ID,
-    api_hash=API_HASH,
-    session_string=STRING_SESSION,
-    lang_code="ar",
-    device_model="MacBook Pro M1",
-    system_version="14.3.1",
-    plugins=dict(root="plugins"),
-    workdir=script_path,
-    parse_mode=ParseMode.HTML,
-)
-
 
 async def main():
     stdout_handler = logging.StreamHandler()
@@ -60,7 +42,23 @@ async def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[stdout_handler],
     )
+    STRING_SESSION = get_env_value("STRING_SESSION", str)
     TOKEN = get_env_value("TOKEN", str)
+    API_ID = get_env_value("API_ID", int)
+    API_HASH = get_env_value("API_HASH", str)
+    app = Client(
+        "myOwnAccount",
+        sleep_threshold=30,
+        api_id=API_ID,
+        api_hash=API_HASH,
+        session_string=STRING_SESSION,
+        lang_code="ar",
+        device_model="MacBook Pro M1",
+        system_version="14.3.1",
+        plugins=dict(root="plugins"),
+        workdir=script_path,
+        parse_mode=ParseMode.HTML,
+    )
 
     app2 = Client(
         "myOwnBot",

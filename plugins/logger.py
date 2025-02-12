@@ -2,8 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from utils.db import RedisHandler
 
-import time
-
+import pytz
 
 redis_handler = RedisHandler()
 
@@ -31,15 +30,17 @@ async def get_message_type_and_file_id(msg: Message):
         return "text", None, msg.text
 
 
-async def save_message_to_redis(
-    message: Message, message_type, file_id, caption, current_time
-):
+async def save_message_to_redis(message: Message, message_type, file_id, caption):
+    riyadh_tz = pytz.timezone("Asia/Riyadh")
+    date_riyadh = message.date.astimezone(riyadh_tz)
+    date_str = date_riyadh.strftime("%Y-%m-%d %H:%M:%S")
     message_data = {
+        "message_id": message.id,
         "text": message.text if message.text else "",
         "caption": caption if caption else "",
         "message_type": message_type,
         "file_id": file_id if file_id else "",
-        "date": current_time,
+        "date": date_str,
     }
     redis_key = f"{message.chat.type}:{message.from_user.id}:{message.id}"
     redis_handler.hset(redis_key, mapping=message_data)
@@ -62,27 +63,27 @@ async def save_sender_data_to_redis(user):
 
 @Client.on_message(filters.private & ~filters.me & ~filters.bot, group=1236)
 async def handle_private_message(client: Client, message: Message):
-    current_time = time.time()
     message_type, file_id, caption = await get_message_type_and_file_id(message)
     if message.from_user:
         await save_sender_data_to_redis(message.from_user)
 
-    await save_message_to_redis(message, message_type, file_id, caption, current_time)
+    await save_message_to_redis(message, message_type, file_id, caption)
 
 
 @Client.on_message(
     filters.group & filters.reply & ~filters.me & ~filters.bot, group=1237
 )
 async def handle_group_reply(client: Client, message: Message):
-    if (
-        message.reply_to_message.from_user
-        and message.reply_to_message.from_user.id == client.me.id
-    ):
-        current_time = time.time()
+    replied_msg_id = (
+        message.reply_to_message.from_user.id
+        if message.reply_to_message.from_user.id
+        else message.reply_to_message.sender_chat.id 
+        if message.reply_to_message.sender_chat
+        else None
+    )
+    if replied_msg_id == client.me.id:
         message_type, file_id, caption = await get_message_type_and_file_id(message)
         if message.from_user:
             await save_sender_data_to_redis(message.from_user)
 
-        await save_message_to_redis(
-            message, message_type, file_id, caption, current_time
-        )
+        await save_message_to_redis(message, message_type, file_id, caption)
