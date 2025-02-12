@@ -35,7 +35,6 @@ async def save_message_to_redis(
     message: Message, message_type, file_id, caption, current_time
 ):
     message_data = {
-        "message_id": message.id,
         "text": message.text if message.text else "",
         "caption": caption if caption else "",
         "message_type": message_type,

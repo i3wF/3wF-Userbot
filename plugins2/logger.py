@@ -10,6 +10,7 @@ from convopyro import listen_message
 from utils.db import RedisHandler
 from dotenv import load_dotenv
 from datetime import datetime
+from main import app
 
 import asyncio
 import pytz
@@ -59,10 +60,8 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
     keys_to_display = keys[start_index:end_index]
     if message_type == ChatType.GROUP or ChatType.SUPERGROUP:
         message_type_ar = "القروب"
-    elif message_type == ChatType.PRIVATE:
-        message_type_ar = "الخاص"
     else:
-        message_type_ar = message_type
+        message_type_ar = "الخاص"
     result = f"📊 نتائج الاستعلام في- {message_type_ar}:\n"
     result += f"📥 إجمالي الرسائل: {total_messages}\n\n"
 
@@ -88,16 +87,25 @@ async def fetch_messages(user_id, message_type, search_term=None, page=1):
                 f"✉️ نوع الرسالة: {formatted_msg_type}\n"
                 f"📝 النص: {message_data.get('text')}\n"
             )
-        else:
+        elif msg_type in ["photo", "video", "animation", "audio", "document"]:
             message_info = (
                 f"📅 التاريخ: {await format_date(message_data.get('date'))}\n"
                 f"✉️ نوع الرسالة: {formatted_msg_type}\n"
                 f"📎 الكابشن: {message_data.get('caption')}\n"
-                f"📂 ملف ID: {message_data.get('file_id')}\n"
+            )
+        else:
+            message_info = (
+                f"📅 التاريخ: {await format_date(message_data.get('date'))}\n"
+                f"✉️ نوع الرسالة: {formatted_msg_type}\n"
+                f"📝 النص: {message_data.get('text')}\n"
             )
         file_id = message_data.get("file_id")
         if file_id != "none" and file_id:
-            message_info += f"🔗 [تحميل الميديا]({file_id})\n"
+            download_button = InlineKeyboardButton(
+                "🔗 تحميل الميديا",
+                callback_data=f"dm_{message_type}_{user_id}_{message_data.get('message_id')}",
+            )
+            reply_markup = InlineKeyboardMarkup([[download_button]])
 
         result += message_info
         result += "\n--------------------------\n"
@@ -134,11 +142,15 @@ async def fetch_messages_for_all_types(user_id, search_term, page=1):
     message_types = [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP]
     result = ""
     keys_to_display = []
+    if message_type == ChatType.GROUP or ChatType.SUPERGROUP:
+        message_type_ar = "القروب"
+    else:
+        message_type_ar = "الخاص"
 
     for message_type in message_types:
         keys = redis_handler.keys(f"{message_type}:{user_id}:*")
         if not keys:
-            result += f"🚫 لا توجد رسائل من نوع {message_type} لهذا المستخدم.\n"
+            result += f"🚫 لا توجد رسائل من نوع {message_type_ar} لهذا المستخدم.\n"
             continue
 
         if search_term:
@@ -149,7 +161,7 @@ async def fetch_messages_for_all_types(user_id, search_term, page=1):
             ]
 
         if not keys:
-            result += f"🚫 لا توجد رسائل تحتوي على الكلمة '{search_term}' من نوع {message_type}.\n"
+            result += f"🚫 لا توجد رسائل تحتوي على الكلمة '{search_term}' من نوع {message_type_ar}.\n"
             continue
 
         total_messages = len(keys)
@@ -158,7 +170,7 @@ async def fetch_messages_for_all_types(user_id, search_term, page=1):
         end_index = start_index + messages_per_page
         keys_to_display.extend(keys[start_index:end_index])
 
-        result += f"📊 نتائج الاستعلام في- {message_type}:\n"
+        result += f"📊 نتائج الاستعلام في- {message_type_ar}:\n"
         result += f"📥 إجمالي الرسائل: {total_messages}\n\n"
 
     if not keys_to_display:
@@ -187,16 +199,25 @@ async def fetch_messages_for_all_types(user_id, search_term, page=1):
                 f"✉️ نوع الرسالة: {formatted_msg_type}\n"
                 f"📝 النص: {message_data.get('text')}\n"
             )
-        else:
+        elif msg_type in ["photo", "video", "animation", "audio", "document"]:
             message_info = (
                 f"📅 التاريخ: {await format_date(message_data.get('date'))}\n"
                 f"✉️ نوع الرسالة: {formatted_msg_type}\n"
                 f"📎 الكابشن: {message_data.get('caption')}\n"
-                f"📂 ملف ID: {message_data.get('file_id')}\n"
+            )
+        else:
+            message_info = (
+                f"📅 التاريخ: {await format_date(message_data.get('date'))}\n"
+                f"✉️ نوع الرسالة: {formatted_msg_type}\n"
+                f"📝 النص: {message_data.get('text')}\n"
             )
         file_id = message_data.get("file_id")
         if file_id != "none" and file_id:
-            message_info += f"🔗 [تحميل الميديا]({file_id})\n"
+            download_button = InlineKeyboardButton(
+                "🔗 تحميل الميديا",
+                callback_data=f"dm_{message_types}_{user_id}_{message_data.get('message_id')}",
+            )
+            reply_markup = InlineKeyboardMarkup([[download_button]])
 
         result += message_info
         result += "\n--------------------------\n"
@@ -306,3 +327,31 @@ async def handle_callback_query(client: Client, callback_query: CallbackQuery):
             await callback_query.message.edit_text(
                 "⏱ **انتهى الوقت المحدد للبحث (60 ثانية).**"
             )
+
+
+@Client.on_callback_query(filters.regex(r"^dm_(\d+)_(\d+)_(\d+)$"))
+async def on_callback_query(client: Client, callback_query: CallbackQuery):
+    message_type, user_id, message_id = callback_query.data.split("_")[1:]
+    key = f"{message_type}:{user_id}:{message_id}"
+    message_data = redis_handler.hgetall(key)
+
+    if not message_data:
+        await callback_query.answer("❌ الرسالة غير موجودة.")
+        return
+
+    file_id = message_data.get("file_id")
+
+    if file_id == "none" or not file_id:
+        await callback_query.answer("❌ لا يوجد ميديا لتنزيله.")
+        return
+    try:
+        await callback_query.answer("جاري تحميل الميديا...")
+        file_path = await app.download_media(file_id)
+        await client.send_document(callback_query.message.chat.id, file_path)
+        await callback_query.message.reply(
+            f"📥 تم تحميل الميديا بنجاح.\n\n📂 المسار: {file_path}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        os.remove(file_path)
+    except Exception as e:
+        await callback_query.answer(f"❌ حدث خطأ أثناء تحميل الميديا: {e}")
