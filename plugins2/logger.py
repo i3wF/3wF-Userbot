@@ -1,17 +1,17 @@
 from pyrogram.types import (
-    Message,
+    InlineQueryResultArticle,
+    InputTextMessageContent,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     CallbackQuery,
+    InlineQuery,
 )
 from pyrogram.enums import ChatType, ParseMode
 from pyrogram import Client, filters
-from convopyro import listen_message
 from utils.db import RedisHandler
 from dotenv import load_dotenv
 from datetime import datetime
 
-import asyncio
 import pytz
 import os
 
@@ -48,6 +48,51 @@ async def format_date(timestamp):
     except Exception as e:
         print(f"Error: {e}")
         return "غير متاح"
+
+
+async def fetch_user_data(user_id):
+    user_key = f"user:{user_id}"
+    user_data = redis_handler.hgetall(user_key)
+    user_info = {
+        "user_id": user_id,
+        "username": user_data.get("username", "غير متاح"),
+        "first_name": user_data.get("first_name", "غير متاح"),
+        "last_name": user_data.get("last_name", "غير متاح"),
+        "previous_usernames": redis_handler.lrange(f"{user_key}:usernames", 0, -1),
+        "previous_first_names": redis_handler.lrange(f"{user_key}:first_names", 0, -1),
+        "previous_last_names": redis_handler.lrange(f"{user_key}:last_names", 0, -1),
+    }
+    messages = []
+    message_types = [ChatType.PRIVATE, ChatType.GROUP, ChatType.SUPERGROUP]
+
+    for message_type in message_types:
+        keys = redis_handler.keys(f"{message_type}:{user_id}:*")
+        for key in keys:
+            message_data = redis_handler.hgetall(key)
+            formatted_date = await format_date(message_data.get("date"))
+            messages.append(
+                {
+                    "message_id": message_data.get("message_id"),
+                    "date": formatted_date,
+                    "message_type": message_data.get("message_type"),
+                    "text": message_data.get("text"),
+                    "caption": message_data.get("caption"),
+                    "file_id": message_data.get("file_id"),
+                }
+            )
+
+        json_filename = f"{user_id}_data.json"
+    with open(json_filename, "w", encoding="utf-8") as json_file:
+        import json
+
+        json.dump(
+            {"user_info": user_info, "messages": messages},
+            json_file,
+            ensure_ascii=False,
+            indent=4,
+        )
+
+    return json_filename
 
 
 async def fetch_messages(user_id, message_type, search_term=None, page=1):
@@ -268,40 +313,62 @@ async def fetch_messages_for_all_types(user_id, search_term, page=1):
     return result, reply_markup
 
 
-@Client.on_message(
-    filters.command("check") & filters.user(int(os.getenv("USER_ID"))), group=13
-)
-async def check_user_messages(client: Client, message: Message):
-    if len(message.command) < 2:
-        await message.reply(
-            "⚠️ الرجاء إدخال معرف المستخدم بعد الأمر. مثال: `/check 12345678`"
+@Client.on_inline_query(filters.user(int(os.getenv("USER_ID"))), group=2)
+async def inline_checker(_, query: InlineQuery):
+    string = query.query.lower()
+    if string.startswith("check"):
+        parts = string.split()
+        if len(parts) < 2:
+            await query.answer(
+                results=[
+                    InlineQueryResultArticle(
+                        title="⚠️ خطأ: لم يتم إدخال معرف",
+                        input_message_content=InputTextMessageContent(
+                            "⚠️ الرجاء إدخال معرف المستخدم بعد الأمر. مثال: `check 12345678`"
+                        ),
+                        description="أدخل المعرف بشكل صحيح.",
+                    )
+                ],
+                cache_time=0,
+            )
+            return
+
+        user_id = parts[1]
+        reply_markup = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "📩 رسائل الخاص", callback_data=f"private:{user_id}"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "💬 ردود المجموعات", callback_data=f"group:{user_id}"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "� تحميل جميع الرسائل", callback_data=f"get_messages:{user_id}"
+                    )
+                ],
+            ]
         )
-        return
-    user_id = message.command[1]
-    reply_markup = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "📩 رسائل الخاص", callback_data=f"private:{user_id}"
+
+        await query.answer(
+            results=[
+                InlineQueryResultArticle(
+                    title="🔍 اختر نوع الاستعلام",
+                    input_message_content=InputTextMessageContent(
+                        "اختر من القائمة أدناه:"
+                    ),
+                    reply_markup=reply_markup,
                 )
             ],
-            [
-                InlineKeyboardButton(
-                    "💬 ردود المجموعات", callback_data=f"group:{user_id}"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🔍 البحث عن كلمة", callback_data=f"search:{user_id}"
-                )
-            ],
-        ]
-    )
-
-    await message.reply("🔍 اختر نوع الاستعلام أو البحث:", reply_markup=reply_markup)
+            cache_time=0,
+        )
 
 
-@Client.on_callback_query(group=1313)
+@Client.on_callback_query(filters.user(int(os.getenv("USER_ID"))), group=1313)
 async def handle_callback_query(client: Client, callback_query: CallbackQuery):
     data = callback_query.data.split(":")
     if data[0] == "page":
@@ -314,117 +381,57 @@ async def handle_callback_query(client: Client, callback_query: CallbackQuery):
         result, reply_markup = await fetch_messages(
             user_id, message_type, search_term if search_term != "none" else None, page
         )
-        await callback_query.message.edit_text(
-            result, reply_markup=reply_markup, parse_mode=ParseMode.DISABLED
-        )
+
+        if callback_query.inline_message_id:
+            await client.edit_inline_text(
+                inline_message_id=callback_query.inline_message_id,
+                text=result,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.DISABLED,
+            )
+        else:
+            await client.edit_inline_text(
+                inline_message_id=callback_query.inline_message_id,
+                text=result,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.DISABLED,
+            )
 
     elif data[0] in ["private", "group"]:
-        message_type = data[0]
-        message_type = ChatType.PRIVATE if message_type == "private" else message_type
+        message_type = ChatType.PRIVATE if data[0] == "private" else data[0]
         user_id = data[1]
         result, reply_markup = await fetch_messages(user_id, message_type)
-        await callback_query.message.edit_text(
-            result, reply_markup=reply_markup, parse_mode=ParseMode.DISABLED
-        )
 
-    elif data[0] == "search":
+        if callback_query.inline_message_id:
+            await client.edit_inline_text(
+                inline_message_id=callback_query.inline_message_id,
+                text=result,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.DISABLED,
+            )
+        else:
+            await client.edit_inline_text(
+                inline_message_id=callback_query.inline_message_id,
+                text=result,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.DISABLED,
+            )
+
+    elif data[0] == "get_messages":
         user_id = data[1]
-        await callback_query.message.edit_text("🔍 **أرسل لي الكلمة التي تبحث عنها:**")
-        try:
-            answer = await listen_message(
-                client, callback_query.message.chat.id, timeout=60
-            )
-            search_term = answer.text
-            result, reply_markup = await fetch_messages_for_all_types(
-                user_id, search_term
-            )
-            await answer.reply(
-                result, reply_markup=reply_markup, parse_mode=ParseMode.DISABLED
-            )
-        except asyncio.TimeoutError:
-            await callback_query.message.edit_text(
-                "⏱ **انتهى الوقت المحدد للبحث (60 ثانية).**"
-            )
+        json_filename = await fetch_user_data(user_id)
 
-
-@Client.on_callback_query(filters.regex(r"^dm_([A-Za-z0-9._]+)_(\d+)_(\d+)$"))
-async def on_callback_query(client: Client, callback_query: CallbackQuery):
-    print(callback_query.data)
-    try:
-        message_type, user_id, message_id = callback_query.data.split("_")[1:]
-    except ValueError:
-        print("Error: Callback data format is incorrect")
-        return
-    if message_type == "group":
-        key_group = f"{ChatType.GROUP}:{user_id}:{message_id}"
-        key_supergroup = f"{ChatType.SUPERGROUP}:{user_id}:{message_id}"
-        message_data = redis_handler.hgetall(key_group) or redis_handler.hgetall(
-            key_supergroup
-        )
-    else:
-        key = f"{message_type}:{user_id}:{message_id}"
-        message_data = redis_handler.hgetall(key)
-    
-    print(message_data)
-    if not message_data:
-        await callback_query.answer("❌ الرسالة غير موجودة.", show_alert=True)
-        return
-
-    file_id = message_data.get("file_id")
-    if file_id == "none" or not file_id:
-        await callback_query.answer("❌ لا يوجد ميديا لتنزيله.", show_alert=True)
-        return
-
-    try:
-        await callback_query.answer("جاري تحميل الميديا...", show_alert=True)
-        STRING_SESSION = os.getenv("STRING_SESSION")
-        API_ID = os.getenv("API_ID")
-        API_HASH = os.getenv("API_HASH")
-        app = Client(
-            "temp",
-            sleep_threshold=30,
-            api_id=API_ID,
-            api_hash=API_HASH,
-            session_string=STRING_SESSION,
-            lang_code="ar",
-            device_model="MacBook Pro M1",
-            system_version="14.3.1",
-        )
-        await app.connect()
-        file_path = await app.download_media(file_id)
-        await app.disconnect()
-        msg_type = message_data.get("message_type")
-        caption = message_data.get("caption", "")
-        if msg_type == "photo":
-            await client.send_photo(
-                callback_query.message.chat.id, file_path, caption=caption
+        if json_filename and os.path.exists(json_filename):
+            await client.edit_inline_text(
+                inline_message_id=callback_query.inline_message_id,
+                text="تم ارسالها في الخاص نجاح",
+                parse_mode=ParseMode.DISABLED,
             )
-        elif msg_type == "document":
             await client.send_document(
-                callback_query.message.chat.id, file_path, caption=caption
+                chat_id=callback_query.from_user.id,
+                document=json_filename,
+                caption="📁 جميع الرسائل تم تجميعها في هذا الملف.",
             )
-        elif msg_type == "video":
-            await client.send_video(
-                callback_query.message.chat.id, file_path, caption=caption
-            )
-        elif msg_type == "audio":
-            await client.send_audio(callback_query.message.chat.id, file_path)
-        elif msg_type == "voice":
-            await client.send_voice(callback_query.message.chat.id, file_path)
-        elif msg_type == "sticker":
-            await client.send_sticker(callback_query.message.chat.id, file_path)
-        elif msg_type == "animation":
-            await client.send_animation(
-                callback_query.message.chat.id, file_path, caption=caption
-            )
-        await callback_query.message.reply(
-            f"📥 تم تحميل الميديا بنجاح.\n\n📂 المسار: {file_path}",
-            parse_mode=ParseMode.MARKDOWN,
-        )
-        try:
-            os.remove(file_path)
-        except Exception as e:
-            print(f"Error removing file {file_path}: {e}")
-
-    except Exception as e:
-        await callback_query.answer(f"❌ حدث خطأ أثناء تحميل الميديا: {e}")
+            os.remove(json_filename)
+        else:
+            await callback_query.message.reply("🚫 لا توجد رسائل متاحة.")

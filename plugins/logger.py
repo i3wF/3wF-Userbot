@@ -37,7 +37,7 @@ async def save_message_to_redis(message: Message, message_type, file_id, caption
     message_data = {
         "message_id": message.id,
         "text": message.text if message.text else "",
-        "caption": caption if caption else "",
+        "caption": "" if message.text else caption,
         "message_type": message_type,
         "file_id": file_id if file_id else "",
         "date": date_str,
@@ -55,10 +55,32 @@ async def save_sender_data_to_redis(user):
         "last_name": user.last_name or "none",
     }
     user_key = f"user:{user.id}"
-    redis_handler.hset(user_key, mapping=sender_data)
-    redis_handler.lpush(f"{user_key}:usernames", sender_data["username"])
-    redis_handler.lpush(f"{user_key}:first_names", sender_data["first_name"])
-    redis_handler.lpush(f"{user_key}:last_names", sender_data["last_name"])
+
+    data_to_save = {}
+    if sender_data["username"] != "none":
+        data_to_save["username"] = sender_data["username"]
+    if sender_data["first_name"] != "none":
+        data_to_save["first_name"] = sender_data["first_name"]
+    if sender_data["last_name"] != "none":
+        data_to_save["last_name"] = sender_data["last_name"]
+
+    if data_to_save:
+        redis_handler.hset(user_key, mapping=data_to_save)
+
+    if sender_data["username"] != "none" and sender_data[
+        "username"
+    ] not in redis_handler.lrange(f"{user_key}:usernames", 0, -1):
+        redis_handler.lpush(f"{user_key}:usernames", sender_data["username"])
+
+    if sender_data["first_name"] != "none" and sender_data[
+        "first_name"
+    ] not in redis_handler.lrange(f"{user_key}:first_names", 0, -1):
+        redis_handler.lpush(f"{user_key}:first_names", sender_data["first_name"])
+
+    if sender_data["last_name"] != "none" and sender_data[
+        "last_name"
+    ] not in redis_handler.lrange(f"{user_key}:last_names", 0, -1):
+        redis_handler.lpush(f"{user_key}:last_names", sender_data["last_name"])
 
 
 @Client.on_message(filters.private & ~filters.me & ~filters.bot, group=1236)
@@ -77,7 +99,7 @@ async def handle_group_reply(client: Client, message: Message):
     replied_msg_id = (
         message.reply_to_message.from_user.id
         if message.reply_to_message.from_user.id
-        else message.reply_to_message.sender_chat.id 
+        else message.reply_to_message.sender_chat.id
         if message.reply_to_message.sender_chat
         else None
     )
@@ -87,3 +109,23 @@ async def handle_group_reply(client: Client, message: Message):
             await save_sender_data_to_redis(message.from_user)
 
         await save_message_to_redis(message, message_type, file_id, caption)
+
+
+@Client.on_message(filters.regex(r"^كشف") & filters.me, group=1238)
+async def check_command(client: Client, message: Message):
+    user_query = (
+        message.text.split(" ", 1)[1] if len(message.text.split(" ")) > 1 else ""
+    )
+    if not user_query:
+        await message.reply_text(
+            "⚠️ الرجاء إدخال معرف المستخدم بعد الأمر. مثال: `كشف 12345678`"
+        )
+        return
+    try:
+        x = await client.get_inline_bot_results("manga3wFbot", f"check {user_query}")
+        for m in x.results:
+            await client.send_inline_bot_result(
+                message.chat.id, x.query_id, m.id, reply_to_message_id=message.id
+            )
+    except Exception as error:
+        await message.reply_text(str(error))
