@@ -68,6 +68,8 @@ async def main():
         api_hash=API_HASH,
         plugins=dict(root="plugins2"),
     )
+
+    Conversation(app)
     Conversation(app2)
 
     await app.start()
