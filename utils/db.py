@@ -6,6 +6,7 @@ import redis
 import json
 
 import aiosqlite
+import redis.exceptions
 
 from utils.config import db_name
 
@@ -88,6 +89,23 @@ class RedisHandler:
 
     def hget(self, redis_key, field):
         return self.redis_client.hget(redis_key, field)
+
+    def lrange(self, redis_key, start=0, end=-1):
+        return self.redis_client.lrange(redis_key, start, end)
+
+    def is_hash(self, redis_key):
+        try:
+            self.redis_client.hgetall(redis_key)
+            return True
+        except redis.exceptions.ResponseError:
+            return False
+
+    def is_list(self, redis_key):
+        try:
+            self.redis_client.lrange(redis_key, 0, 0)
+            return True
+        except redis.exceptions.ResponseError:
+            return False
 
 
 class Database:
