@@ -85,7 +85,7 @@ async def _update(_: Client, message: Message):
     if current_hash == upcoming:
         return await message.edit("<b>Userbot already up to date</b>")
 
-    if "--hard" in args:
+    if ["--hard", "—hard"] in args:
         await shell_exec("git reset --hard HEAD")
 
     try:
