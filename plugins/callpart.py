@@ -27,7 +27,7 @@ async def whoiscall(client: Client, m: Message):
 
     for member in participants:
         status = "ساكت" if member.is_muted else "يتكلم"
-        mention = f"[{member.chat.first_name}](tg://user?id={member.chat.id})"
+        mention = f"[{member.chat.full_name}](tg://user?id={member.chat.id})"
         reply_text += f"⌯ - {mention} › {status}\n"
 
     reply_text += f"\n⌯ عدد الموجودين : {len(participants)}"
