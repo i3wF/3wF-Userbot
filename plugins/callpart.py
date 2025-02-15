@@ -1,6 +1,5 @@
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
-from main import userbot1
 
 
 @Client.on_message(filters.regex(r"^من في الكول$") & filters.group, group=15)
@@ -30,7 +29,7 @@ async def whoiscall(client: Client, m: Message):
         status = "ساكت" if member.is_muted else "يتكلم"
         mention = f"[{member.chat.first_name}](tg://user?id={member.chat.id})"
         reply_text += f"⌯ - {mention} › {status}\n"
-    
+
     reply_text += f"\n⌯ عدد الموجودين : {len(participants)}"
 
     await m.edit_text(reply_text, parse_mode=enums.ParseMode.MARKDOWN)
