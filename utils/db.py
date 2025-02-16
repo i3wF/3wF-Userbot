@@ -1,7 +1,6 @@
 import threading
 import asyncio
 import sqlite3
-import orjson
 import redis
 import json
 
@@ -21,57 +20,14 @@ class RedisHandler:
             charset="utf-8",
         )
 
-    def _get_redis_key(self, bot_id, key):
-        return f"bot:{bot_id}:{key}"
+    def set_key(self, redis_key, value):
+        return self.redis_client.set(redis_key, value)
 
-    def save_dict(self, key, data):
-        if not isinstance(data, dict):
-            raise ValueError("The provided data is not a dictionary.")
-        redis_key = self._get_redis_key(key)
-        self.redis_client.set(redis_key, orjson.dumps(data))
+    def get_key(self, redis_key):
+        return self.redis_client.get(redis_key)
 
-    def load_dict(self, key):
-        redis_key = self._get_redis_key(key)
-        data = self.redis_client.get(redis_key)
-        if data is None:
-            self.save_dict(key, {})
-            return {}
-        data = orjson.loads(data)
-        if not isinstance(data, dict):
-            raise ValueError("The loaded data is not a dictionary.")
-        return data
-
-    def save_list(self, key, data):
-        if not isinstance(data, list):
-            raise ValueError("The provided data is not a list.")
-        redis_key = self._get_redis_key(key)
-        self.redis_client.set(redis_key, orjson.dumps(data))
-
-    def load_list(self, key):
-        redis_key = self._get_redis_key(key)
-        data = self.redis_client.get(redis_key)
-        if data is None:
-            self.save_list(key, [])
-            return []
-        data = orjson.loads(data)
-        if not isinstance(data, list):
-            raise ValueError("The loaded data is not a list.")
-        return data
-
-    def set_key(self, key, value):
-        redis_key = self._get_redis_key(key)
-        self.redis_client.set(redis_key, value)
-
-    def get_key(self, key):
-        redis_key = self._get_redis_key(key)
-        value = self.redis_client.get(redis_key)
-        if value is not None:
-            return value.decode("utf-8")
-        return None
-
-    def delete_key(self, key):
-        redis_key = self._get_redis_key(key)
-        self.redis_client.delete(redis_key)
+    def delete_key(self, redis_key):
+        return self.redis_client.delete(redis_key)
 
     def hset(self, redis_key, mapping):
         if not isinstance(mapping, dict):
