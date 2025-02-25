@@ -44,15 +44,9 @@ def download_audio(
 ):
     try:
         ydl_opts = {
-            "format": "bestaudio",
-            "keepvideo": False,
-            "prefer_ffmpeg": False,
-            "geo_bypass": True,
-            "outtmpl": f"{downloads_dir}/%(id)s.m4a",
-            "quiet": True,
-            "username": "oauth2",
-            "password": "",
-            "extractor_args": {"youtube": {"player_client": ["ios"]}},
+            "format": "bestaudio[ext=m4a]",
+            "outtmpl": f"{downloads_dir}/{generate_random_filename()}.%(ext)s",
+            "cookies": "cookies.txt",
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(link, download=True)
