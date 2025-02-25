@@ -65,8 +65,7 @@ def download_audio(
         ydl_opts = {
             "format": "bestaudio[ext=m4a]",
             "outtmpl": f"{downloads_dir}/{generate_random_filename()}.%(ext)s",
-            "username": "oauth2",
-            "password": "",
+            "cookies": "cookies.txt",
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(link, download=True)
