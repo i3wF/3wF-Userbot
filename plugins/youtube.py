@@ -6,9 +6,19 @@ import requests
 import asyncio
 import random
 import yt_dlp
+import string
 import json
 import os
 
+def generate_random_filename(length=10):
+    """Generate a random filename."""
+    letters_and_digits = string.ascii_letters + string.digits
+    return "".join(random.choice(letters_and_digits) for _ in range(length))
+
+
+async def fetch_thumbnails(session, url):
+    async with session.get(url) as response:
+        return await response.read()
 
 async def search_youtube(query):
     return YoutubeSearch(query, max_results=4).to_dict()
