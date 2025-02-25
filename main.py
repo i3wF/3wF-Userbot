@@ -29,7 +29,21 @@ def get_env_value(key: str, to_type, default=None):
 
 
 env = dotenv_values("./.env")
+STRING_SESSION = get_env_value("STRING_SESSION", str)
+TOKEN = get_env_value("TOKEN", str)
+API_ID = get_env_value("API_ID", int)
+API_HASH = get_env_value("API_HASH", str)
 
+async def userbot1():
+    app = Client(
+        "py-tgcalls",
+        api_id=API_ID,
+        api_hash=API_HASH,
+        session_string=STRING_SESSION,
+    )
+    call_py = PyTgCalls(app)
+    await call_py.start()
+    return app
 
 async def main():
     stdout_handler = logging.StreamHandler()
@@ -42,10 +56,7 @@ async def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[stdout_handler],
     )
-    STRING_SESSION = get_env_value("STRING_SESSION", str)
-    TOKEN = get_env_value("TOKEN", str)
-    API_ID = get_env_value("API_ID", int)
-    API_HASH = get_env_value("API_HASH", str)
+    
     app = Client(
         "myOwnAccount",
         sleep_threshold=30,
