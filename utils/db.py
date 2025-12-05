@@ -116,8 +116,8 @@ class SqliteDatabase(Database):
         self._initialized = True
     
     def _connect(self) -> None:
-        """Establish database connection with retry logic"""
-        max_retries = 3
+        """Establish database connection with retry logic and WAL mode"""
+        max_retries = 5
         retry_delay = 1
         
         for attempt in range(max_retries):
@@ -125,11 +125,20 @@ class SqliteDatabase(Database):
                 self._conn = sqlite3.connect(
                     self._file,
                     check_same_thread=False,
-                    timeout=30.0
+                    timeout=60.0,
+                    isolation_level=None
                 )
                 self._conn.row_factory = sqlite3.Row
                 self._cursor = self._conn.cursor()
-                self._logger.info(f"Database connection established to {self._file}")
+                self._conn.execute("PRAGMA journal_mode=WAL")
+
+                self._conn.execute("PRAGMA busy_timeout=60000")
+
+                self._conn.execute("PRAGMA synchronous=NORMAL")
+                self._conn.execute("PRAGMA cache_size=10000")
+                self._conn.execute("PRAGMA temp_store=MEMORY")
+                
+                self._logger.info(f"Database connection established to {self._file} with WAL mode")
                 return
             except sqlite3.Error as e:
                 self._logger.error(f"Connection attempt {attempt + 1} failed: {e}")
@@ -140,7 +149,7 @@ class SqliteDatabase(Database):
                     raise sqlite3.Error(f"Failed to connect to database after {max_retries} attempts: {e}")
     
     def _get_connection(self) -> sqlite3.Connection:
-        """Get a connection from the pool or create a new one"""
+        """Get a connection from the pool or create a new one with WAL mode"""
         with self._pool_lock:
             if self._connection_pool:
                 return self._connection_pool.pop()
@@ -150,18 +159,24 @@ class SqliteDatabase(Database):
                     conn = sqlite3.connect(
                         self._file,
                         check_same_thread=False,
-                        timeout=30.0
+                        timeout=60.0,
+                        isolation_level=None
                     )
                     conn.row_factory = sqlite3.Row
+
+                    conn.execute("PRAGMA journal_mode=WAL")
+                    conn.execute("PRAGMA busy_timeout=60000")
+                    conn.execute("PRAGMA synchronous=NORMAL")
+                    conn.execute("PRAGMA cache_size=10000")
+                    conn.execute("PRAGMA temp_store=MEMORY")
+                    
                     return conn
                 except sqlite3.Error as e:
                     self._current_pool_size -= 1
                     raise e
             else:
-                self._pool_lock.release()
-                time.sleep(0.1)
-                with self._pool_lock:
-                    return self._get_connection()
+                time.sleep(0.2)
+                return self._get_connection()
     
     def _return_connection(self, conn: sqlite3.Connection) -> None:
         """Return a connection to the pool"""
@@ -232,16 +247,29 @@ class SqliteDatabase(Database):
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
-        try:
-            with self._lock:
-                cursor = self._conn.cursor()
-                cursor.execute(sql)
-                self._conn.commit()
-                cursor.close()
-                self._logger.debug(f"Table '{module}' created or verified")
-        except sqlite3.Error as e:
-            self._logger.error(f"Failed to create table '{module}': {e}")
-            raise
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                with self._lock:
+                    cursor = self._conn.cursor()
+                    cursor.execute(sql)
+                    self._conn.commit()
+                    cursor.close()
+                    self._logger.debug(f"Table '{module}' created or verified")
+                    return
+            except sqlite3.OperationalError as e:
+                if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                    self._logger.warning(f"Database locked when creating table '{module}', retrying ({attempt + 1}/{max_retries})")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                self._logger.error(f"Failed to create table '{module}': {e}")
+                raise
+            except sqlite3.Error as e:
+                self._logger.error(f"Failed to create table '{module}': {e}")
+                raise
     
     def _precreate_common_tables(self) -> None:
         """Pre-create commonly used tables to avoid runtime lag"""
@@ -270,86 +298,126 @@ class SqliteDatabase(Database):
             self._logger.error(f"Failed to pre-create common tables: {e}")
 
     def _execute(self, module: str, sql: str, params: Optional[Dict[str, Any]] = None) -> sqlite3.Cursor:
-        """Execute SQL with automatic table creation and error handling"""
+        """Execute SQL with automatic table creation and error handling with retry logic"""
         if not module.replace('_', '').replace('-', '').replace('.', '').isalnum():
             raise ValueError(f"Invalid module name: {module}")
             
-        with self._get_cursor() as cursor:
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
             try:
-                self._logger.debug(f"Executing SQL for module '{module}'")
-                return cursor.execute(sql, params or {})
-            except sqlite3.OperationalError as e:
-                if "no such table" in str(e).lower():
-                    self._logger.debug(f"Table '{module}' not found, creating it")
-                    self._create_table(module)
-                    return cursor.execute(sql, params or {})
-                self._logger.error(f"SQL execution error: {e}")
-                raise
-            except sqlite3.Error as e:
-                self._logger.error(f"Database error during execution: {e}")
-                raise
+                with self._get_cursor() as cursor:
+                    try:
+                        self._logger.debug(f"Executing SQL for module '{module}'")
+                        return cursor.execute(sql, params or {})
+                    except sqlite3.OperationalError as e:
+                        if "no such table" in str(e).lower():
+                            self._logger.debug(f"Table '{module}' not found, creating it")
+                            self._create_table(module)
+                            return cursor.execute(sql, params or {})
+                        elif "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                            self._logger.warning(f"Database locked during execution for '{module}', retrying ({attempt + 1}/{max_retries})")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2
+                            continue
+                        self._logger.error(f"SQL execution error: {e}")
+                        raise
+                    except sqlite3.Error as e:
+                        self._logger.error(f"Database error during execution: {e}")
+                        raise
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(retry_delay)
+                retry_delay *= 2
 
     def get(self, module: str, variable: str, default: Any = None) -> Any:
-        """Retrieve a value from the database"""
+        """Retrieve a value from the database with retry logic"""
         if not variable or not isinstance(variable, str):
             raise ValueError("Variable name must be a non-empty string")
             
-        try:
-            cur = self._execute(
-                module,
-                f"SELECT * FROM '{module}' WHERE var=:var",
-                {"var": variable}
-            )
-            row = cur.fetchone()
-            result = default if row is None else self._parse_row(row)
-            self._logger.debug(f"Retrieved {module}.{variable}: {result}")
-            return result
-        except Exception as e:
-            self._logger.error(f"Error getting {module}.{variable}: {e}")
-            return default
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                cur = self._execute(
+                    module,
+                    f"SELECT * FROM '{module}' WHERE var=:var",
+                    {"var": variable}
+                )
+                row = cur.fetchone()
+                result = default if row is None else self._parse_row(row)
+                self._logger.debug(f"Retrieved {module}.{variable}: {result}")
+                return result
+            except sqlite3.OperationalError as e:
+                if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                    self._logger.warning(f"Database locked when getting {module}.{variable}, retrying ({attempt + 1}/{max_retries})")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                self._logger.error(f"Error getting {module}.{variable}: {e}")
+                return default
+            except Exception as e:
+                self._logger.error(f"Error getting {module}.{variable}: {e}")
+                return default
 
     def set(self, module: str, variable: str, value: Any) -> bool:
-        """Store a value in the database"""
+        """Store a value in the database with retry logic"""
         if not variable or not isinstance(variable, str):
             raise ValueError("Variable name must be a non-empty string")
             
-        try:
-            sql = f"""
-            INSERT INTO '{module}' (var, val, type)
-            VALUES (:var, :val, :type)
-            ON CONFLICT(var) DO UPDATE SET
-            val=:val,
-            type=:type,
-            updated_at=CURRENT_TIMESTAMP
-            WHERE var=:var
-            """
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                sql = f"""
+                INSERT INTO '{module}' (var, val, type)
+                VALUES (:var, :val, :type)
+                ON CONFLICT(var) DO UPDATE SET
+                val=:val,
+                type=:type,
+                updated_at=CURRENT_TIMESTAMP
+                WHERE var=:var
+                """
 
-            if isinstance(value, bool):
-                val = "1" if value else "0"
-                typ = "bool"
-            elif isinstance(value, str):
-                val = value
-                typ = "str"
-            elif isinstance(value, int):
-                val = str(value)
-                typ = "int"
-            elif isinstance(value, float):
-                val = str(value)
-                typ = "float"
-            elif hasattr(value, 'strftime'):
-                val = value.strftime("%Y-%m-%d %H:%M:%S")
-                typ = "datetime"
-            else:
-                val = json.dumps(value)
-                typ = "json"
+                if isinstance(value, bool):
+                    val = "1" if value else "0"
+                    typ = "bool"
+                elif isinstance(value, str):
+                    val = value
+                    typ = "str"
+                elif isinstance(value, int):
+                    val = str(value)
+                    typ = "int"
+                elif isinstance(value, float):
+                    val = str(value)
+                    typ = "float"
+                elif hasattr(value, 'strftime'):
+                    val = value.strftime("%Y-%m-%d %H:%M:%S")
+                    typ = "datetime"
+                else:
+                    val = json.dumps(value)
+                    typ = "json"
 
-            self._execute(module, sql, {"var": variable, "val": val, "type": typ})
-            self._conn.commit()
-            self._logger.debug(f"Stored {module}.{variable} ({typ}): {val}")
-            return True
-        except Exception as e:
-            self._logger.error(f"Error setting {module}.{variable}: {e}")
-            return False
+                with self._get_cursor() as cursor:
+                    cursor.execute(sql, {"var": variable, "val": val, "type": typ})
+                
+                self._logger.debug(f"Stored {module}.{variable} ({typ}): {val}")
+                return True
+            except sqlite3.OperationalError as e:
+                if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                    self._logger.warning(f"Database locked when setting {module}.{variable}, retrying ({attempt + 1}/{max_retries})")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                self._logger.error(f"Error setting {module}.{variable}: {e}")
+                return False
+            except Exception as e:
+                self._logger.error(f"Error setting {module}.{variable}: {e}")
+                return False
 
     def remove(self, module: str, variable: str) -> bool:
         """Remove a variable from the database"""
