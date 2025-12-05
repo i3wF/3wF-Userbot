@@ -23,7 +23,7 @@ class RedisHandler:
             port=redis_port,
             db=redis_db,
             decode_responses=True,
-            charset="utf-8",
+            encoding="utf-8", 
         )
 
     def set_key(self, redis_key, value):
