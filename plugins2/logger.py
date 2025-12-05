@@ -9,13 +9,11 @@ from pyrogram.types import (
 from pyrogram.enums import ChatType, ParseMode
 from pyrogram import Client, filters
 from utils.db import RedisHandler
-from dotenv import load_dotenv
 from datetime import datetime
+from utils.db import db
 
 import pytz
 import os
-
-load_dotenv()
 
 redis_handler = RedisHandler()
 
@@ -313,8 +311,9 @@ async def fetch_messages_for_all_types(user_id, search_term, page=1):
     return result, reply_markup
 
 
-@Client.on_inline_query(filters.user(int(os.getenv("USER_ID"))), group=2)
+@Client.on_inline_query(group=2)
 async def inline_checker(_, query: InlineQuery):
+    if query.from_user.id != db.get("core", "user_id"): return
     string = query.query.lower()
     if string.startswith("check"):
         parts = string.split()
@@ -368,9 +367,10 @@ async def inline_checker(_, query: InlineQuery):
         )
 
 
-@Client.on_callback_query(filters.user(int(os.getenv("USER_ID"))), group=1313)
+@Client.on_callback_query(group=1313)
 async def handle_callback_query(client: Client, callback_query: CallbackQuery):
     data = callback_query.data.split(":")
+    if callback_query.from_user.id != db.get("core", "user_id"): return
     if data[0] == "page":
         user_id, message_type, search_term, page = (
             data[1],

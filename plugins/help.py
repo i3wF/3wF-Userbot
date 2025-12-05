@@ -3,6 +3,7 @@ from pyrogram.types import Message
 
 from utils.misc import modules_help
 from utils.filters import command
+from utils.db import db
 
 
 @Client.on_message(command(["cmds", "shit"]) & filters.me)
@@ -12,7 +13,7 @@ async def cmds(client: Client, message: Message):
     elif message.command[0] == "shit":
         text = "shit"
     try:
-        x = await client.get_inline_bot_results("Hayday3wFbot", text)
+        x = await client.get_inline_bot_results(db.get("core", "bot_username"), text)
         for m in x.results:
             await client.send_inline_bot_result(
                 message.chat.id, x.query_id, m.id, reply_to_message_id=message.id

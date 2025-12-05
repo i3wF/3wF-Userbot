@@ -1,13 +1,19 @@
+import redis.exceptions
 import threading
-import asyncio
+import logging
 import sqlite3
 import redis
 import json
+import time
+from dotenv import dotenv_values
 
-import aiosqlite
-import redis.exceptions
+from typing import Any, Dict, Optional, List
+from contextlib import contextmanager
 
-from utils.config import db_name
+env = dotenv_values("./.env")
+db_name = env.get("DB_NAME", "database")
+if not db_name.endswith('.db'):
+    db_name = f"{db_name}.db"
 
 
 class RedisHandler:
@@ -82,192 +88,360 @@ class Database:
 
 
 class SqliteDatabase(Database):
-    def __init__(self, file):
-        self._conn = sqlite3.connect(file, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._cursor = self._conn.cursor()
-        self._lock = threading.Lock()
-
-    @staticmethod
-    def _parse_row(row: sqlite3.Row):
-        parse_func = {
-            "bool": lambda x: x == "1",
-            "int": int,
-            "str": lambda x: x,
-            "json": json.loads,
-        }
-        return parse_func[row["type"]](row["val"])
-
-    def _create_table(self, module: str):
-        sql = f"""
-        CREATE TABLE IF NOT EXISTS '{module}' (
-        var TEXT UNIQUE NOT NULL,
-        val TEXT NOT NULL,
-        type TEXT NOT NULL
-        )
-        """
-        self._cursor.execute(sql)
-        self._conn.commit()
-
-    def _execute(self, module: str, sql, params=None):
-        with self._lock:
-            try:
-                return self._cursor.execute(sql, params)
-            except sqlite3.OperationalError as e:
-                if str(e).startswith("no such table"):
-                    self._create_table(module)
-                    return self._cursor.execute(sql, params)
-                raise e from None
-
-    def get(self, module: str, variable: str, default=None):
-        cur = self._execute(
-            module, f"SELECT * FROM '{module}' WHERE var=:var", {"var": variable}
-        )
-        row = cur.fetchone()
-        return default if row is None else self._parse_row(row)
-
-    def set(self, module: str, variable: str, value) -> bool:
-        sql = f"""
-        INSERT INTO '{module}' VALUES ( :var, :val, :type )
-        ON CONFLICT (var) DO
-        UPDATE SET val=:val, type=:type WHERE var=:var
-        """
-
-        if isinstance(value, bool):
-            val = "1" if value else "0"
-            typ = "bool"
-        elif isinstance(value, str):
-            val = value
-            typ = "str"
-        elif isinstance(value, int):
-            val = str(value)
-            typ = "int"
-        else:
-            val = json.dumps(value)
-            typ = "json"
-
-        self._execute(module, sql, {"var": variable, "val": val, "type": typ})
-        self._conn.commit()
-
-        return True
-
-    def remove(self, module: str, variable: str):
-        sql = f"DELETE FROM '{module}' WHERE var=:var"
-        self._execute(module, sql, {"var": variable})
-        self._conn.commit()
-
-    def get_collection(self, module: str) -> dict:
-        sql = f"SELECT * FROM '{module}'"
-        cur = self._execute(module, sql)
-
-        return {row["var"]: self._parse_row(row) for row in cur}
-
-    def close(self):
-        self._conn.commit()
-        self._conn.close()
-
-
-class AioSqliteDatabase(Database):
-    def __init__(self, file=db_name):
+    _instance = None
+    _lock_instance = threading.Lock()
+    
+    def __new__(cls, *args, **kwargs):
+        with cls._lock_instance:
+            if cls._instance is None:
+                cls._instance = super(SqliteDatabase, cls).__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+    
+    def __init__(self, file: str):
+        if self._initialized:
+            return
+            
         self._file = file
         self._conn = None
-
-    async def _connect(self):
-        self._conn = await aiosqlite.connect(self._file)
-        self._conn.row_factory = aiosqlite.Row
-        self._cursor = await self._conn.cursor()
-        self._lock = asyncio.Lock()
+        self._cursor = None
+        self._lock = threading.Lock()
+        self._logger = logging.getLogger(__name__)
+        self._connection_pool = []
+        self._max_pool_size = 5
+        self._current_pool_size = 0
+        self._pool_lock = threading.Lock()
+        self._connect()
+        self._precreate_common_tables()
+        self._initialized = True
+    
+    def _connect(self) -> None:
+        """Establish database connection with retry logic"""
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                self._conn = sqlite3.connect(
+                    self._file,
+                    check_same_thread=False,
+                    timeout=30.0
+                )
+                self._conn.row_factory = sqlite3.Row
+                self._cursor = self._conn.cursor()
+                self._logger.info(f"Database connection established to {self._file}")
+                return
+            except sqlite3.Error as e:
+                self._logger.error(f"Connection attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    raise sqlite3.Error(f"Failed to connect to database after {max_retries} attempts: {e}")
+    
+    def _get_connection(self) -> sqlite3.Connection:
+        """Get a connection from the pool or create a new one"""
+        with self._pool_lock:
+            if self._connection_pool:
+                return self._connection_pool.pop()
+            elif self._current_pool_size < self._max_pool_size:
+                self._current_pool_size += 1
+                try:
+                    conn = sqlite3.connect(
+                        self._file,
+                        check_same_thread=False,
+                        timeout=30.0
+                    )
+                    conn.row_factory = sqlite3.Row
+                    return conn
+                except sqlite3.Error as e:
+                    self._current_pool_size -= 1
+                    raise e
+            else:
+                self._pool_lock.release()
+                time.sleep(0.1)
+                with self._pool_lock:
+                    return self._get_connection()
+    
+    def _return_connection(self, conn: sqlite3.Connection) -> None:
+        """Return a connection to the pool"""
+        with self._pool_lock:
+            try:
+                conn.execute("SELECT 1")
+                self._connection_pool.append(conn)
+            except sqlite3.Error:
+                try:
+                    conn.close()
+                except:
+                    pass
+                self._current_pool_size -= 1
+    
+    @contextmanager
+    def _get_cursor(self):
+        """Context manager for cursor access with automatic error handling and connection pooling"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            try:
+                yield cursor
+            finally:
+                self._return_connection(conn)
+        except sqlite3.Error as e:
+            self._logger.error(f"Database error: {e}")
+            raise
 
     @staticmethod
-    def _parse_row(row: aiosqlite.Row):
+    def _parse_row(row: Optional[sqlite3.Row]) -> Any:
+        """Parse a database row into the appropriate Python type"""
+        if row is None:
+            return None
+            
         parse_func = {
             "bool": lambda x: x == "1",
             "int": int,
+            "float": float,
             "str": lambda x: x,
             "json": json.loads,
+            "datetime": lambda x: time.strptime(x, "%Y-%m-%d %H:%M:%S"),
         }
-        return parse_func[row["type"]](row["val"])
+        
+        try:
+            row_type = row["type"]
+            row_val = row["val"]
+            
+            if row_type not in parse_func:
+                raise ValueError(f"Unsupported data type: {row_type}")
+                
+            return parse_func[row_type](row_val)
+        except (KeyError, ValueError, json.JSONDecodeError) as e:
+            logging.error(f"Error parsing row: {e}")
+            raise ValueError(f"Failed to parse row: {e}")
 
-    async def _create_table(self, module: str):
+    def _create_table(self, module: str) -> None:
+        """Create a table for a specific module if it doesn't exist"""
+        if not module.replace('_', '').replace('-', '').replace('.', '').isalnum():
+            raise ValueError(f"Invalid module name: {module}")
+            
         sql = f"""
         CREATE TABLE IF NOT EXISTS '{module}' (
         var TEXT UNIQUE NOT NULL,
         val TEXT NOT NULL,
-        type TEXT NOT NULL
+        type TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
-        self._cursor.execute(sql)
-        self._conn.commit()
-
-    async def _execute(self, module: str, *args, **kwargs) -> aiosqlite.Cursor:
         try:
-            return await self._cursor.execute(*args, **kwargs)
-        except aiosqlite.OperationalError as e:
-            if str(e).startswith("no such table"):
-                await self._create_table(module)
-                return await self._cursor.execute(*args, **kwargs)
-            raise e from None
+            with self._lock:
+                cursor = self._conn.cursor()
+                cursor.execute(sql)
+                self._conn.commit()
+                cursor.close()
+                self._logger.debug(f"Table '{module}' created or verified")
+        except sqlite3.Error as e:
+            self._logger.error(f"Failed to create table '{module}': {e}")
+            raise
+    
+    def _precreate_common_tables(self) -> None:
+        """Pre-create commonly used tables to avoid runtime lag"""
+        common_tables = ['history', 'core', 'config', 'cache', 'core.main']
+        
+        try:
+            with self._lock:
+                cursor = self._conn.cursor()
+                try:
+                    for table in common_tables:
+                        sql = f"""
+                        CREATE TABLE IF NOT EXISTS '{table}' (
+                        var TEXT UNIQUE NOT NULL,
+                        val TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                        cursor.execute(sql)
+                    self._conn.commit()
+                    self._logger.debug(f"Pre-created common tables: {', '.join(common_tables)}")
+                finally:
+                    cursor.close()
+        except sqlite3.Error as e:
+            self._logger.error(f"Failed to pre-create common tables: {e}")
 
-    async def get(self, module: str, variable: str, default=None):
-        if not self._conn:
-            await self._connect()
-        sql = f"SELECT * FROM '{module}' WHERE var=:var"
-        cur = await self._execute(module, sql, {"var": variable})
+    def _execute(self, module: str, sql: str, params: Optional[Dict[str, Any]] = None) -> sqlite3.Cursor:
+        """Execute SQL with automatic table creation and error handling"""
+        if not module.replace('_', '').replace('-', '').replace('.', '').isalnum():
+            raise ValueError(f"Invalid module name: {module}")
+            
+        with self._get_cursor() as cursor:
+            try:
+                self._logger.debug(f"Executing SQL for module '{module}'")
+                return cursor.execute(sql, params or {})
+            except sqlite3.OperationalError as e:
+                if "no such table" in str(e).lower():
+                    self._logger.debug(f"Table '{module}' not found, creating it")
+                    self._create_table(module)
+                    return cursor.execute(sql, params or {})
+                self._logger.error(f"SQL execution error: {e}")
+                raise
+            except sqlite3.Error as e:
+                self._logger.error(f"Database error during execution: {e}")
+                raise
 
-        row = await cur.fetchone()
-        result = default if row is None else self._parse_row(row)
-        await self.close()
-        return result
+    def get(self, module: str, variable: str, default: Any = None) -> Any:
+        """Retrieve a value from the database"""
+        if not variable or not isinstance(variable, str):
+            raise ValueError("Variable name must be a non-empty string")
+            
+        try:
+            cur = self._execute(
+                module,
+                f"SELECT * FROM '{module}' WHERE var=:var",
+                {"var": variable}
+            )
+            row = cur.fetchone()
+            result = default if row is None else self._parse_row(row)
+            self._logger.debug(f"Retrieved {module}.{variable}: {result}")
+            return result
+        except Exception as e:
+            self._logger.error(f"Error getting {module}.{variable}: {e}")
+            return default
 
-    async def set(self, module: str, variable: str, value) -> bool:
-        if not self._conn:
-            await self._connect()
-        sql = f"""
-        INSERT INTO '{module}' VALUES ( :var, :val, :type )
-        ON CONFLICT (var) DO
-        UPDATE SET val=:val, type=:type WHERE var=:var
-        """
+    def set(self, module: str, variable: str, value: Any) -> bool:
+        """Store a value in the database"""
+        if not variable or not isinstance(variable, str):
+            raise ValueError("Variable name must be a non-empty string")
+            
+        try:
+            sql = f"""
+            INSERT INTO '{module}' (var, val, type)
+            VALUES (:var, :val, :type)
+            ON CONFLICT(var) DO UPDATE SET
+            val=:val,
+            type=:type,
+            updated_at=CURRENT_TIMESTAMP
+            WHERE var=:var
+            """
 
-        if isinstance(value, bool):
-            val = "1" if value else "0"
-            typ = "bool"
-        elif isinstance(value, str):
-            val = value
-            typ = "str"
-        elif isinstance(value, int):
-            val = str(value)
-            typ = "int"
-        else:
-            val = json.dumps(value)
-            typ = "json"
+            if isinstance(value, bool):
+                val = "1" if value else "0"
+                typ = "bool"
+            elif isinstance(value, str):
+                val = value
+                typ = "str"
+            elif isinstance(value, int):
+                val = str(value)
+                typ = "int"
+            elif isinstance(value, float):
+                val = str(value)
+                typ = "float"
+            elif hasattr(value, 'strftime'):
+                val = value.strftime("%Y-%m-%d %H:%M:%S")
+                typ = "datetime"
+            else:
+                val = json.dumps(value)
+                typ = "json"
 
-        await self._execute(module, sql, {"var": variable, "val": val, "type": typ})
-        await self._conn.commit()
-        await self.close()
-        return True
+            self._execute(module, sql, {"var": variable, "val": val, "type": typ})
+            self._conn.commit()
+            self._logger.debug(f"Stored {module}.{variable} ({typ}): {val}")
+            return True
+        except Exception as e:
+            self._logger.error(f"Error setting {module}.{variable}: {e}")
+            return False
 
-    async def remove(self, module: str, variable: str):
-        if not self._conn:
-            await self._connect()
-        sql = f"DELETE FROM '{module}' WHERE var=:var"
-        await self._execute(module, sql, {"var": variable})
-        await self._conn.commit()
-        await self.close()
+    def remove(self, module: str, variable: str) -> bool:
+        """Remove a variable from the database"""
+        if not variable or not isinstance(variable, str):
+            raise ValueError("Variable name must be a non-empty string")
+            
+        try:
+            sql = f"DELETE FROM '{module}' WHERE var=:var"
+            self._execute(module, sql, {"var": variable})
+            self._conn.commit()
+            self._logger.debug(f"Removed {module}.{variable}")
+            return True
+        except Exception as e:
+            self._logger.error(f"Error removing {module}.{variable}: {e}")
+            return False
 
-    async def get_collection(self, module: str) -> dict:
-        if not self._conn:
-            await self._connect()
-        sql = f"SELECT * FROM '{module}'"
-        cur = await self._execute(module, sql)
-        result = {row["var"]: self._parse_row(row) async for row in cur}
-        await self.close()
-        return result
+    def get_collection(self, module: str) -> Dict[str, Any]:
+        """Retrieve all variables for a module as a dictionary"""
+        try:
+            sql = f"SELECT * FROM '{module}'"
+            cur = self._execute(module, sql)
+            result = {row["var"]: self._parse_row(row) for row in cur}
+            self._logger.debug(f"Retrieved collection for {module}: {len(result)} items")
+            return result
+        except Exception as e:
+            self._logger.error(f"Error getting collection for {module}: {e}")
+            return {}
 
-    async def close(self):
-        await self._conn.commit()
-        await self._cursor.close()
-        await self._conn.close()
-        self._conn = None
+    def batch_set(self, module: str, data: Dict[str, Any]) -> bool:
+        """Set multiple values in a single transaction"""
+        if not data:
+            return True
+            
+        try:
+            with self._lock:
+                self._conn.execute("BEGIN TRANSACTION")
+                try:
+                    for variable, value in data.items():
+                        self.set(module, variable, value)
+                    self._conn.commit()
+                    self._logger.debug(f"Batch set {len(data)} items for {module}")
+                    return True
+                except Exception as e:
+                    self._conn.rollback()
+                    self._logger.error(f"Batch set failed, rolled back: {e}")
+                    return False
+        except Exception as e:
+            self._logger.error(f"Error in batch set for {module}: {e}")
+            return False
 
+    def batch_remove(self, module: str, variables: List[str]) -> bool:
+        """Remove multiple variables in a single transaction"""
+        if not variables:
+            return True
+            
+        try:
+            with self._lock:
+                self._conn.execute("BEGIN TRANSACTION")
+                try:
+                    for variable in variables:
+                        self.remove(module, variable)
+                    self._conn.commit()
+                    self._logger.debug(f"Batch removed {len(variables)} items from {module}")
+                    return True
+                except Exception as e:
+                    self._conn.rollback()
+                    self._logger.error(f"Batch remove failed, rolled back: {e}")
+                    return False
+        except Exception as e:
+            self._logger.error(f"Error in batch remove for {module}: {e}")
+            return False
+
+    def close(self) -> None:
+        """Close all database connections in the pool"""
+        try:
+            if self._conn:
+                self._conn.commit()
+                self._conn.close()
+                self._logger.info("Main database connection closed")
+            
+            with self._pool_lock:
+                for conn in self._connection_pool:
+                    try:
+                        conn.close()
+                    except sqlite3.Error as e:
+                        self._logger.warning(f"Error closing pooled connection: {e}")
+                
+                self._connection_pool.clear()
+                self._current_pool_size = 0
+                self._logger.info("All pooled connections closed")
+        except sqlite3.Error as e:
+            self._logger.error(f"Error closing database: {e}")
+            raise
 
 db = SqliteDatabase(db_name)

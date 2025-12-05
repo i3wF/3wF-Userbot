@@ -10,40 +10,12 @@ from convopyro import Conversation
 from pyrogram.enums import ParseMode
 
 from utils.db import db
-from dotenv import dotenv_values
 from utils.misc import script_path
 from utils.scripts import CustomFormatter
+from utils.config import api_id, api_hash, bot_token, string_session
 
 if script_path != os.getcwd():
     os.chdir(script_path)
-
-
-def get_env_value(key: str, to_type, default=None):
-    value = env.get(key)
-    if value is None:
-        return default
-    try:
-        return to_type(value)
-    except (TypeError, ValueError) as e:
-        raise ValueError(f"Invalid value for {key}: {value}") from e
-
-
-env = dotenv_values("./.env")
-STRING_SESSION = get_env_value("STRING_SESSION", str)
-TOKEN = get_env_value("TOKEN", str)
-API_ID = get_env_value("API_ID", int)
-API_HASH = get_env_value("API_HASH", str)
-
-async def userbot1():
-    app = Client(
-        "py-tgcalls",
-        api_id=API_ID,
-        api_hash=API_HASH,
-        session_string=STRING_SESSION,
-    )
-    call_py = PyTgCalls(app)
-    await call_py.start()
-    return app
 
 async def main():
     stdout_handler = logging.StreamHandler()
@@ -60,9 +32,9 @@ async def main():
     app = Client(
         "myOwnAccount",
         sleep_threshold=30,
-        api_id=API_ID,
-        api_hash=API_HASH,
-        session_string=STRING_SESSION,
+        api_id=api_id,
+        api_hash=api_hash,
+        session_string=string_session,
         lang_code="ar",
         device_model="MacBook Pro M1",
         system_version="14.3.1",
@@ -71,24 +43,28 @@ async def main():
         parse_mode=ParseMode.HTML,
     )
 
-    app2 = Client(
+    bot = Client(
         "myOwnBot",
         sleep_threshold=30,
-        bot_token=TOKEN,
-        api_id=API_ID,
-        api_hash=API_HASH,
+        api_id=api_id,
+        api_hash=api_hash,
+        bot_token=bot_token,
         plugins=dict(root="plugins2"),
     )
 
     Conversation(app)
-    Conversation(app2)
+    Conversation(bot)
 
     await app.start()
+    await bot.start()
+
+    db.set("core", "user_id", app.me.id)
+    db.set("core", "bot_username", bot.me.username)
+    
     async for dialog in app.get_dialogs(limit=100):
         logging.info(f"Dialog: {dialog.chat.title}")
 
     await app.storage.save()
-    await app2.start()
 
     if updater := db.get("core.updater", "restart_info"):
         try:
@@ -131,7 +107,7 @@ async def main():
 
     await idle()
     await app.stop()
-    await app2.stop()
+    await bot.stop()
 
 
 if __name__ == "__main__":

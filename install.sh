@@ -60,10 +60,10 @@ if [ -z "$API_HASH" ]; then
 fi
 echo ""
 
-TOKEN=$(get_env_value "TOKEN")
-if [ -z "$TOKEN" ]; then
+BOT_TOKEN=$(get_env_value "BOT_TOKEN")
+if [ -z "$BOT_TOKEN" ]; then
     echo "Please enter your bot token:"
-    read -r TOKEN
+    read -r BOT_TOKEN
 fi
 echo ""
 
@@ -81,7 +81,7 @@ fi
 
 {
     echo "STRING_SESSION=$STRING_SESSION"
-    echo "TOKEN=$TOKEN"
+    echo "BOT_TOKEN=$BOT_TOKEN"
     echo "API_ID=$API_ID"
     echo "API_HASH=$API_HASH"
     echo "DB_NAME=$DB_NAME"

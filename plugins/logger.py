@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from utils.db import RedisHandler
+
+from utils.db import RedisHandler, db
 
 import pytz
 
@@ -44,7 +45,6 @@ async def save_message_to_redis(message: Message, message_type, file_id, caption
     }
     redis_key = f"{message.chat.type}:{message.from_user.id}:{message.id}"
     redis_handler.hset(redis_key, mapping=message_data)
-    print(f"تم تسجيل الرسالة في Redis: {redis_key}")
 
 
 async def save_sender_data_to_redis(user):
@@ -122,7 +122,7 @@ async def check_command(client: Client, message: Message):
         )
         return
     try:
-        x = await client.get_inline_bot_results("manga3wFbot", f"check {user_query}")
+        x = await client.get_inline_bot_results(db.get("core", "bot_username"), f"check {user_query}")
         for m in x.results:
             await client.send_inline_bot_result(
                 message.chat.id, x.query_id, m.id, reply_to_message_id=message.id

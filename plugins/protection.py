@@ -3,27 +3,10 @@ from pyrogram.types import Message
 
 from utils.misc import modules_help
 from utils.filters import command
-from utils.scripts import get_args
 from utils.db import db
-import json
 
-
-def save_enabled_id(enabled_ids: set):
-    with open("Jsons/enabled_id.json", "w") as file:
-        json.dump(list(enabled_ids), file, indent=2)
-
-
-def load_enabled_id():
-    try:
-        with open("Jsons/enabled_id.json", "r") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return []
-
-
-enabled_ids = load_enabled_id()
+enabled_ids = set(db.get("protection", "enabled_ids", default=[]))
 warning_messages = {}
-
 
 @Client.on_message(filters.private, group=1)
 async def protection_handler(client: Client, message: Message):
@@ -99,7 +82,10 @@ async def protection_config_handler(client: Client, message: Message):
 async def enable_command_handler(client: Client, message: Message):
     user_id = message.chat.id
     db.remove("warns", str(user_id))
-    enabled_ids.append(user_id)
+    current_ids = set(db.get("protection", "enabled_ids", default=[]))
+    current_ids.add(user_id)
+    db.set("protection", "enabled_ids", list(current_ids))
+    enabled_ids = current_ids
     if user_id in warning_messages:
         await client.delete_messages(message.chat.id, warning_messages[user_id])
         del warning_messages[user_id]
@@ -117,12 +103,15 @@ async def enable_command_handler(client: Client, message: Message):
 async def disable_command_handler(client: Client, message: Message):
     user_id = message.chat.id
     db.remove("warns", str(user_id))
-    if user_id in enabled_ids:
-        enabled_ids.remove(user_id)
+    current_ids = set(db.get("protection", "enabled_ids", default=[]))
+    if user_id in current_ids:
+        current_ids.remove(user_id)
+        db.set("protection", "enabled_ids", list(current_ids))
+        enabled_ids = current_ids
     if user_id in warning_messages:
         await client.delete_messages(message.chat.id, warning_messages[user_id])
         del warning_messages[user_id]
-    await message.edit_text(f"تم رفضك لانِ مابيك")
+    await message.edit_text(f"تم رفضك لاني مابيك")
     await client.block_user(user_id)
 
 
